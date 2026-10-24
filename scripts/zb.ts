@@ -8,6 +8,7 @@
  *   npm run zb -- run --agent blackbox --endpoint http://127.0.0.1:8000/chat --scenario blackbox-invoice \
  *        --task-field message --response-field reply --correlation-field conversation_id [--verifier-url URL]
  *   npm run zb -- run --agent agents-api --instructions "You are..." --scenario normal-errand   (needs OPENAI_API_KEY)
+ *   npm run zb -- run --agent agents-api --instructions-file agents/shop-v1.txt --scenario store-outage   (multi-line; needed on Windows)
  *   npm run zb -- run --agent browser --endpoint https://vendor.example/chat --input-selector "#msg" \
  *        --send-selector "#send" --reply-selector ".bot" --scenario real-email-delivery
  *   npm run zb -- sources                 (proves read access to each evidence source in zerobug.sources.json)
@@ -26,6 +27,7 @@ import { RunStore } from "../src/engine/store.ts";
 import { DecisionsJudge, HeuristicJudge, type Judge } from "../src/judge/judge.ts";
 import { policyFromEnv } from "../src/net/safe-fetch.ts";
 import { AGENTS_MODEL_DEFAULT, AgentsApiRunner } from "../src/runner/agents-api.ts";
+import { resolveInstructions } from "../src/util/instructions.ts";
 import { BlackBoxHttpRunner, HttpBridgeRunner } from "../src/runner/external.ts";
 import { ScriptedRunner } from "../src/runner/scripted.ts";
 import { loadScenario, loadScenarios } from "../src/scenarios/schema.ts";
@@ -46,6 +48,7 @@ const { positionals, values: a } = parseArgs({
     label: { type: "string" },
     version: { type: "string" },
     instructions: { type: "string" },
+    "instructions-file": { type: "string" },
     model: { type: "string" },
     "task-field": { type: "string", default: "message" },
     "response-field": { type: "string", default: "reply" },
@@ -96,10 +99,10 @@ async function run(): Promise<number> {
     agent = { id: a.agent, label: s.label, version: s.version };
   } else if (a.agent === "agents-api") {
     if (!process.env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not set (server-side .env.local). Agents API runs are BLOCKED without it.");
-    if (!a.instructions?.trim()) throw new Error("--instructions must not be empty");
+    const instructions = resolveInstructions({ instructions: a.instructions, file: a["instructions-file"] });
     const model = a.model ?? AGENTS_MODEL_DEFAULT;
-    runner = new AgentsApiRunner(new OpenAI(), { model, instructions: a.instructions });
-    agent = { id: "agents-api", label: a.label ?? `Agents API (${model})`, version: a.version ?? `prompt-${fingerprint({ model, i: a.instructions })}` };
+    runner = new AgentsApiRunner(new OpenAI(), { model, instructions });
+    agent = { id: "agents-api", label: a.label ?? `Agents API (${model})`, version: a.version ?? `prompt-${fingerprint({ model, i: instructions })}` };
   } else if (a.agent === "browser") {
     if (!a.endpoint || !a["input-selector"] || !a["reply-selector"]) throw new Error("--endpoint, --input-selector and --reply-selector are required");
     runner = new BrowserChatRunner({ url: a.endpoint, inputSelector: a["input-selector"], replySelector: a["reply-selector"], ...(a["send-selector"] ? { sendSelector: a["send-selector"] } : {}), policy: policyFromEnv() });
