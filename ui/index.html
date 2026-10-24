@@ -831,6 +831,11 @@ const SAMPLE_PROFILES = [
   { id: "s-shopz-v2", sample: true, name: "ShopZ refund agent", version: "v2", type: "api", url: "http://127.0.0.1:3400/agent/v2", desc: SHOPZ_DESC, spec: SHOPZ_SPEC },
   { id: "s-mail-v1", sample: true, name: "Email agent", version: "v1", type: "api", url: "http://127.0.0.1:3399/ai/v1", desc: MAIL_DESC, spec: MAIL_SPEC },
   { id: "s-mail-v2", sample: true, name: "Email agent", version: "v2", type: "api", url: "http://127.0.0.1:3399/ai/v2", desc: MAIL_DESC, spec: MAIL_SPEC },
+  { id: "s-mail-liar", sample: true, name: "Email agent that only claims it sent", version: "liar", type: "api", url: "http://127.0.0.1:3399/liar-chat", desc: MAIL_DESC, spec: MAIL_SPEC },
+  { id: "s-mail-page", sample: true, name: "Email agent (chat web page)", version: "v1-page", type: "web", url: "http://127.0.0.1:3399/ai/v1/page", desc: MAIL_DESC, spec: MAIL_SPEC },
+  { id: "s-mail-mcp", sample: true, name: "Email agent (MCP server)", version: "mcp", type: "mcp", url: "http://127.0.0.1:3399/mcp", desc: MAIL_DESC, spec: MAIL_SPEC },
+  { id: "s-mail-openai", sample: true, name: "Email agent (OpenAI-compatible API)", version: "openai", type: "openai_compat", url: "http://127.0.0.1:3399/v1", fields: { model: "mail-agent" }, desc: MAIL_DESC, spec: MAIL_SPEC },
+  { id: "s-shopz-page", sample: true, name: "ShopZ refund agent (chat web page)", version: "v2-page", type: "web", url: "http://127.0.0.1:3400/agent/v2/page", desc: SHOPZ_DESC, spec: SHOPZ_SPEC },
 ];
 const myAgents = () => [...SAMPLE_PROFILES, ...store.get("agents", [])];
 const currentUrl = () => (S.f[S.type] || {}).url || "";
@@ -839,7 +844,7 @@ function currentProfile() {
   return myAgents().find((p) => p.id === S.currentId && p.type === S.type && p.url === currentUrl() && p.version === S.version) || null;
 }
 function useAgent(p) {
-  S.type = p.type; S.f[p.type] = { ...(S.f[p.type] || {}), url: p.url }; S.version = p.version; S.desc = p.desc || ""; S.spec = p.spec || "";
+  S.type = p.type; S.f[p.type] = { ...(S.f[p.type] || {}), url: p.url, ...(p.fields || {}) }; S.version = p.version; S.desc = p.desc || ""; S.spec = p.spec || "";
   S.currentId = p.id; S.plan = null; S.step = 1; S.view = "wizard"; S.smoke = null;
   save(); store.set("currentId", p.id); history.pushState({}, "", "/"); render();
 }
@@ -874,11 +879,10 @@ async function viewAgents(m) {
   card.append(grid); m.append(card);
   let runs = []; try { runs = await call("GET", "/api/runs"); } catch {}
   for (const p of myAgents()) {
-    // Runs for this agent: same address, and a version label that starts with the profile's version.
-    const mine = runs.filter((r) => r.agent && (r.agent.version || "").startsWith(p.version) && (r.agent.label || "").includes(p.url));
+    // Runs for this agent: same address and exact version; the summary covers its latest batch.
+    const mine = runs.filter((r) => r.agent && r.agent.version === p.version && (r.agent.label || "").includes(p.url));
     const last = mine.length ? mine.reduce((a, b) => (a.startedAt > b.startedAt ? a : b)) : null;
-    const day = last ? last.startedAt.slice(0, 10) : "";
-    const batch = mine.filter((r) => r.startedAt.slice(0, 10) === day).slice(0, 50);
+    const batch = last ? mine.filter((r) => Date.parse(last.startedAt) - Date.parse(r.startedAt) < 15 * 60e3) : [];
     const proven = batch.filter((r) => r.verdict === "PASS").length;
     const kind = AGENT_TYPES.find((x) => x.id === p.type);
     grid.append(h("article", { class: "card", style: "margin:0;display:flex;flex-direction:column;gap:8px" },

@@ -361,7 +361,7 @@ const server = http.createServer(async (req, res) => {
     res.end(JSON.stringify(b));
   };
   try {
-    if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/connections" || url.pathname === "/design" || url.pathname.startsWith("/run/"))) {
+    if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/connections" || url.pathname === "/agents" || url.pathname === "/design" || url.pathname.startsWith("/run/"))) {
       res.writeHead(200, { "content-type": "text/html; charset=utf-8", "content-security-policy": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'" });
       return res.end(readFileSync(pageUrl, "utf8"));
     }
