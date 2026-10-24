@@ -44,10 +44,11 @@ data/runs/        (gitignored)                  # live run records
 data/recorded/    (committed)                   # recorded v1/v2 comparison for the gate
 scripts/api-proof.ts                            # Task 1: proves both APIs
 scripts/run.ts                                  # Task 8: CLI runner
-scripts/record-comparison.ts                    # Task 12
+scripts/record-comparison.ts                    # Task 13
 src/lib/world/      types.ts faults.ts fixtures.ts tools.ts world.ts
 src/lib/scenarios/  schema.ts load.ts
-src/lib/runner/     types.ts scripted.ts agents-api.ts
+src/lib/runner/     types.ts scripted.ts agents-api.ts url.ts url-sessions.ts
+src/lib/net/        safe-endpoint.ts
 src/lib/judge/      types.ts questions.ts evidence.ts decisions.ts fake.ts
 src/lib/checks/     checks.ts
 src/lib/verdict/    verdict.ts
@@ -68,7 +69,7 @@ docs/api-notes.md                               # Task 1 output: exact SDK shape
 **Files:**
 - Create: Next.js app at repo root, `vitest.config.ts`, `.env.example`, `scripts/api-proof.ts`, `docs/api-notes.md`
 - Modify: `.gitignore`
-- Delete: `README.md` (one-line placeholder; recreated in Task 13, it blocks `create-next-app`)
+- Delete: `README.md` (one-line placeholder; recreated in Task 14, it blocks `create-next-app`)
 
 **Interfaces:**
 - Produces: `docs/api-notes.md`, the source of truth for exact TypeScript call shapes and event names that Tasks 4 and 5 code against. `ZB_CONCURRENCY` (number) measured here.
