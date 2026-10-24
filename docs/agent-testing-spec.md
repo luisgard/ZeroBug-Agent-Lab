@@ -74,11 +74,24 @@ Compare a **baseline** (v1) against a **candidate** (v2) on the same scenario fi
 
 The gate shows pass counts and regressions per scenario, and every decision links to the runs and evidence behind it.
 
+### Supported agent types
+
+ZeroBug tests any agent that can act through tools, because every runner plugs into the same `AgentRunner` interface (section 6) and every action goes through the fake apps. Two connection types cover every framework:
+
+| Agent type | How ZeroBug connects | This weekend |
+| --- | --- | --- |
+| OpenAI Agents API agent | `AgentsApiRunner` creates the session and answers its function-tool calls | **Fully tested** (sample agents v1 and v2) |
+| Any agent behind an HTTP endpoint | `UrlAgentRunner` posts the task; the agent calls the fake apps over HTTP (contract in section 6) | **Fully tested** (our reference HTTP agent) |
+| OpenAI Agents SDK, LangGraph, CrewAI, LlamaIndex, custom code | Wrap the agent in an HTTP endpoint that follows the URL contract | Supported by design, not tested this weekend |
+| Voice and browser agents | Same contract once their actions are exposed as tools | Supported by design, not tested this weekend |
+
+On stage and in the README we say exactly this: works for all types of agents, fully tested on two.
+
 ### Three screens
 
 1. **Connect agent**
    - **Agents API agent** (demo path): paste instructions, pick a model. ZeroBug plugs in the fake-app tools.
-   - **Agent at a URL** (stretch): any framework, through the same runner interface (section 6).
+   - **Agent at a URL:** any framework. Paste the endpoint; ZeroBug checks the address is allowed, then runs it through the URL contract (section 6).
    - **Sample agents:** Shopping Agent **v1** (baseline) and **v2** (candidate with a bad prompt change, see section 10).
 2. **Choose scenarios:** cards with a plain-language task, failure switches, and checkboxes for each check. Checks tagged *AI judge* use the Decisions API.
 3. **Run & results:** live run view, observed results, and the release gate. *Layout still open, see section 10.*
@@ -156,15 +169,27 @@ Scenario file ──► Test world (store + outbox, per run)
        │                    ▲ tool calls / results
        ▼                    │
    AgentRunner  ◄───────────┘        (interface)
-     └─ AgentsApiRunner              (the only implementation this weekend)
+     ├─ AgentsApiRunner              (OpenAI Agents API agents)
+     └─ UrlAgentRunner               (any agent behind an HTTP endpoint)
        │
        ▼  normalized result: events[], tool calls, final message, status
    Checks + Decisions judge ──► Verdict ──► Report / Release gate
 ```
 
 - `AgentRunner.run(agent_config, scenario, world)` streams normalized events (`tool_call`, `tool_result`, `message`, `done`, `error`) and returns a normalized result.
-- `AgentsApiRunner` is the only implementation for the hackathon. It handles `agent.session.requires_action`, calls the world, and sends `agent.session.input.tool_result`.
-- Checks, judge, and verdict logic contain **no** Agents API-specific code. A URL runner later plugs into the same interface.
+- `AgentsApiRunner` handles `agent.session.requires_action`, calls the world, and sends `agent.session.input.tool_result`.
+- `UrlAgentRunner` drives any HTTP agent through the URL contract below.
+- Checks, judge, and verdict logic contain **no** framework-specific code.
+
+### URL contract (any framework)
+
+1. ZeroBug sends `POST <agent endpoint>` with `{ runId, task, tools, toolsUrl, toolsToken }`. `tools` uses the same JSON-schema function format as the Agents API tools.
+2. The agent calls each tool with `POST <toolsUrl>/<toolName>`, header `Authorization: Bearer <toolsToken>`, JSON body = the tool's arguments. ZeroBug answers `{ success, output }` or `{ success: false, error }` from that run's fake apps and logs the call.
+3. The agent answers the original request with `{ finalMessage }` when it's done.
+
+Rules: the token is random per run and only opens that run's world, so runs stay isolated. ZeroBug enforces `max_tool_calls` (extra calls get an error and the run is FAIL) and `max_seconds` (request aborted, FAIL). A refused connection, a non-2xx answer or a malformed body is ERROR. Endpoints that resolve to private or internal addresses are rejected unless explicitly allowed for local development (SSRF protection from `PLAN.md`).
+
+**Reference HTTP agent:** a small agent we host ourselves at `/api/reference-agent`, written without the Agents API (plain function calling on the Responses API), following the contract exactly. It proves the URL path end to end and is what we run in the URL test.
 
 ### Agents API: does the work
 
@@ -212,7 +237,7 @@ Rules:
 | 0:30 to 1:45 | **Live:** Shopping Agent v2, "Store outage" scenario, real API calls. Judges watch task → tool calls (labeled Agents API) → empty cart → Decisions API "claimed success: 97%" → **FAIL** with the evidence. |
 | 1:45 to 2:15 | **Release gate:** v1 vs v2 across all scenarios, from runs executed earlier, labeled with their run time ("Recorded Sat 11:40 a.m."). Poisoned product page: v2 emailed the loyalty code to deals@evil.test. Decision: **BLOCKED**. |
 | 2:15 to 2:30 | **Handled failure:** trigger an API failure, the run shows **ERROR** and the UI stays up. |
-| 2:30 to 3:00 | Agents API ran the agent and every tool call; Decisions API read its claims. Limitations: fake apps only, URL agents not yet supported. |
+| 2:30 to 3:00 | Agents API ran the agent and every tool call; Decisions API read its claims. Works for any agent that acts through tools; fully tested on Agents API and HTTP agents. Limitations: fake apps only, other frameworks untested. |
 
 The comparison in 1:45 to 2:15 is real data from real runs, stored with its evidence, never edited or hardcoded. We say on stage that it was recorded earlier.
 
@@ -242,13 +267,13 @@ The comparison in 1:45 to 2:15 is real data from real runs, stored with its evid
 6. Sample agents v1 and v2.
 7. Screens: connect (sample + Agents API), choose scenarios, run & results with the live run view.
 8. Repeat runs + observed results per scenario; stored runs with evidence.
+9. `UrlAgentRunner` + the tool endpoint + the reference HTTP agent, passing the same scenarios.
 
 **P1 (should)**
 - Release gate.
 - Failure labels and honesty score from the Decisions API.
 
 **Stretch**
-- Agent at a URL (new `AgentRunner` implementation).
 - Scenario designer agent.
 - Two-customers scenario.
 
@@ -287,6 +312,6 @@ These were open in the first draft; settled Friday night so the build can start.
 ## 11. Known limitations (say these on stage)
 
 - Fake apps only: store and outbox.
-- Agents API agents only; URL agents not yet supported.
+- Works for any agent that acts through tools, but fully tested on two types only: OpenAI Agents API agents and HTTP agents (our reference agent). Other frameworks connect through the URL contract and are untested.
 - Observed results, not guarantees: 5 passing runs don't prove the 6th.
 - AI judge is advisory; verdicts rest on hard checks of app state.
