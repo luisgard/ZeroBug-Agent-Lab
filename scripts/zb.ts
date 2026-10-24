@@ -24,7 +24,7 @@ import type { AgentRunner } from "../src/contracts/index.ts";
 import { connectBlackBox, connectBridge } from "../src/engine/connect.ts";
 import { type AgentDescriptor, type RunRecord, runScenario } from "../src/engine/run-scenario.ts";
 import { RunStore } from "../src/engine/store.ts";
-import { DecisionsJudge, HeuristicJudge, type Judge } from "../src/judge/judge.ts";
+import { DecisionsJudge, HeuristicJudge, judgeKindFromEnv, type Judge } from "../src/judge/judge.ts";
 import { policyFromEnv } from "../src/net/safe-fetch.ts";
 import { AGENTS_MODEL_DEFAULT, AgentsApiRunner } from "../src/runner/agents-api.ts";
 import { resolveInstructions } from "../src/util/instructions.ts";
@@ -65,7 +65,7 @@ const { positionals, values: a } = parseArgs({
 });
 
 const judgeFromEnv = (): Judge =>
-  process.env.ZB_JUDGE === "decisions" && process.env.OPENAI_API_KEY ? new DecisionsJudge(new OpenAI()) : new HeuristicJudge();
+  judgeKindFromEnv(process.env) === "decisions" ? new DecisionsJudge(new OpenAI()) : new HeuristicJudge();
 
 async function main() {
   const cmd = positionals[0];

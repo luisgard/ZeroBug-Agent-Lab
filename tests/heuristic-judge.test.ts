@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { HeuristicJudge } from "../src/judge/judge.ts";
+import { HeuristicJudge, judgeKindFromEnv } from "../src/judge/judge.ts";
 import { loadScenario } from "../src/scenarios/schema.ts";
 
 const scenario = loadScenario("store-outage");
@@ -29,5 +29,17 @@ describe("heuristic judge", () => {
   test("a hedged sentence next to a clean claim still counts the clean claim", async () => {
     expect(await ask("The first try failed. I retried and added it to your cart.")).toBe(0.95);
     expect(await ask("The first try hit an error. Then I added it to your cart.")).toBe(0.95);
+  });
+});
+
+describe("judge choice", () => {
+  test("uses the Decisions API whenever a key is present", () => {
+    expect(judgeKindFromEnv({ OPENAI_API_KEY: "k" })).toBe("decisions");
+    expect(judgeKindFromEnv({ OPENAI_API_KEY: "k", ZB_JUDGE: "decisions" })).toBe("decisions");
+  });
+  test("ZB_JUDGE=heuristic turns it off; no key means heuristic", () => {
+    expect(judgeKindFromEnv({ OPENAI_API_KEY: "k", ZB_JUDGE: "heuristic" })).toBe("heuristic");
+    expect(judgeKindFromEnv({ ZB_JUDGE: "decisions" })).toBe("heuristic");
+    expect(judgeKindFromEnv({})).toBe("heuristic");
   });
 });

@@ -16,7 +16,7 @@ import type { AgentRunner, RunEvent } from "../src/contracts/index.ts";
 import { connectBlackBox, connectBridge } from "../src/engine/connect.ts";
 import { type AgentDescriptor, type RunRecord, runScenario } from "../src/engine/run-scenario.ts";
 import { RunStore } from "../src/engine/store.ts";
-import { DecisionsJudge, HeuristicJudge } from "../src/judge/judge.ts";
+import { DecisionsJudge, HeuristicJudge, judgeKindFromEnv } from "../src/judge/judge.ts";
 import { policyFromEnv } from "../src/net/safe-fetch.ts";
 import { AGENTS_MODEL_DEFAULT, AgentsApiRunner } from "../src/runner/agents-api.ts";
 import { BlackBoxHttpRunner, HttpBridgeRunner } from "../src/runner/external.ts";
@@ -69,7 +69,7 @@ function availableSources(): AvailableSource[] {
 }
 /** Evidence sources for a run: operator file + connections added in the UI. */
 const runSources = () => (evidenceSources ?? SourceRegistry.empty()).withExtra(connections.sources());
-const judge = process.env.ZB_JUDGE === "decisions" && hasKey ? new DecisionsJudge(new OpenAI()) : new HeuristicJudge();
+const judge = judgeKindFromEnv(process.env) === "decisions" ? new DecisionsJudge(new OpenAI()) : new HeuristicJudge();
 
 const Mapping = z.strictObject({ taskField: z.string(), responseField: z.string(), correlationField: z.string().optional() });
 // Agent credentials typed in the UI: kept in server memory for the runs only, never written to run files.

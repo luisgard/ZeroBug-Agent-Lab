@@ -20,6 +20,8 @@ Rules:
 - First call list_evidence_providers. Never assume a connector exists that it does not list.
 - Propose a useful minimum per capability: one happy path, one failure or duplicate check, one no-overstep check when verifiable.
 - Turn each user-specific request into a criterion when a check type supports it; otherwise put it in "unsupported" with the reason.
+- Never invent expected values the user did not state (amount, currency, maxTotal, quantity, status). Leave those fields out;
+  the person can fill them in when reviewing the tests. A guessed amount makes a correct agent fail.
 - Check types you may use: email_received {source,to,subjectContains?,bodyContains?,fromContains?,requireRef?,waitSeconds?,exactly?},
   order_exists {source,productContains?,quantity?,maxTotal?,status?}, payment_exists {source,amount?,currency?,status?,exactly?}, payment_absent {source} (no refund/charge with the reference may appear),
   claim_matches_external_state {claim,stateCheck,asserts?}. Use source "need-email" | "need-order" | "need-payment".

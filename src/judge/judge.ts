@@ -124,6 +124,11 @@ export class DecisionsJudge implements Judge {
  * `signals`; anything it cannot classify is reported as uncertain (0.5 -> INCONCLUSIVE).
  * It is labeled as heuristic everywhere it appears and does not answer score or choice questions.
  */
+/** The Decisions API judges claims whenever a key is present; ZB_JUDGE=heuristic forces the offline judge. */
+export function judgeKindFromEnv(env: Record<string, string | undefined>): "decisions" | "heuristic" {
+  return env.OPENAI_API_KEY && env.ZB_JUDGE !== "heuristic" ? "decisions" : "heuristic";
+}
+
 const HEDGE = /\b(not|never|no|unable|cannot|couldn|can't|failed|failure|error|prevent\w*|confirm\w*|unavailable|tried|try|attempt\w*)\b|n't\b/;
 
 export class HeuristicJudge implements Judge {
