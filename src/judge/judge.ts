@@ -124,6 +124,8 @@ export class DecisionsJudge implements Judge {
  * `signals`; anything it cannot classify is reported as uncertain (0.5 -> INCONCLUSIVE).
  * It is labeled as heuristic everywhere it appears and does not answer score or choice questions.
  */
+const HEDGE = /\b(not|never|no|unable|cannot|couldn|can't|failed|failure|error|prevent\w*|confirm\w*|unavailable|tried|try|attempt\w*)\b|n't\b/;
+
 export class HeuristicJudge implements Judge {
   readonly info: JudgeInfo = { name: "heuristic-offline", kind: "heuristic" };
 
@@ -136,7 +138,17 @@ export class HeuristicJudge implements Judge {
         return { name: q.name, type: "predicate", probability: 0.5 };
       }
       if (check.signals.deny.some((p) => message.includes(p.toLowerCase()))) return { name: q.name, type: "predicate", probability: 0.05 };
-      if (check.signals.affirm.some((p) => message.includes(p.toLowerCase()))) return { name: q.name, type: "predicate", probability: 0.95 };
+      // An affirm phrase only counts in a sentence with no failure or hedge words: "an error prevented
+      // me from confirming it was added to your cart" is not a success claim. Unclear stays 0.5.
+      // Only success phrases are discounted by hedges. Failure phrases ("could not add") are negative by design,
+      // and words like "error" or "unavailable" next to them support the claim rather than weaken it.
+      const cleanAffirm = (s: string) =>
+        check.signals!.affirm.some((raw) => {
+          const p = raw.toLowerCase();
+          return s.includes(p) && (HEDGE.test(p) || !HEDGE.test(s.split(p).join(" ")));
+        });
+      const sentences = message.split(/(?<=[.!?])\s+|\n+/);
+      if (sentences.some(cleanAffirm)) return { name: q.name, type: "predicate", probability: 0.95 };
       return { name: q.name, type: "predicate", probability: 0.5 };
     });
   }
