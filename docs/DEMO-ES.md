@@ -104,7 +104,7 @@ Textos listos para el paso 2:
 
 - **El agente responde "Este agente necesita OPENAI_API_KEY"**: mira la ventana de ShopZ. Al arrancar dice `OpenAI: clave encontrada en …` o `OpenAI: NO encontré OPENAI_API_KEY. Busqué en: …`. Revisa que `.env.local` esté en **esa** carpeta (si descomprimiste un zip nuevo, cópialo ahí) y que se llame exactamente `.env.local`. En Windows, en el Explorador activa *Ver → Extensiones de nombre de archivo* para ver si se llama `.env.local.txt`. Después de cambiarlo, cierra ShopZ con Ctrl+C y vuelve a arrancarlo.
 
-- **"Error del modelo…"**: tu clave no tiene acceso a `gpt-4o-mini`. Agrega `ZB_DEMO_MODEL=<un modelo de tu cuenta>` a `.env.local` y reinicia la ventana 1.
+- **"Error del modelo…"**: tu clave no tiene acceso a `gpt-4.1`. Agrega `ZB_DEMO_MODEL=<un modelo de tu cuenta>` a `.env.local` y reinicia la ventana 1.
 - **La v1 falla alguna**: un modelo real no es 100 % predecible. Abre el detalle y léelo: ese es justo el valor de ZeroBug. Si el correo no trae el número de pedido, ZeroBug no puede ligarlo a la prueba y lo marca como no llegado.
 - **"La IA no logró proponer pruebas válidas"**: pasa si quitaste `ZB_PLANNER=rules`. ZeroBug usa las reglas básicas y te muestra abajo por qué rechazó lo de la IA.
 - **Una prueba dice "Falta conectar…"**: revisa en *Conexiones* que las dos digan ✓ (que ShopZ esté corriendo).
@@ -117,4 +117,6 @@ Textos listos para el paso 2:
 
 ## Qué se verificó y qué no
 
-Verificado en este repo con un modelo **simulado** que sigue el prompt que recibe: v1 15/15, v2 4/15 con las tres fallas detectadas. **Todavía no se ha corrido con un modelo real de OpenAI** (no había clave); tu primera demo será esa prueba.
+Verificado con un modelo **simulado**: v1 15/15, v2 4/15 con las tres fallas detectadas.
+
+**Con un modelo real (24 oct, `gpt-4.1`, 3 corridas por prueba, desde el navegador):** v1 9/9 comprobadas; v2 2/9, con las tres fallas detectadas (reembolso doble, 89 USD fuera de política, 589 USD por la trampa). Con `gpt-4o-mini` la v1 no mandaba el correo cuando rechazaba y una vez escribió mal la dirección, por eso ShopZ ahora usa `gpt-4.1` por defecto. Detalles y evidencia: [`REAL-MODEL-RESULTS.md`](REAL-MODEL-RESULTS.md).

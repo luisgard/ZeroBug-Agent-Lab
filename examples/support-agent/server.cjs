@@ -9,7 +9,7 @@
  *                                             the code guard and the idempotency key
  *   GET  /agent/v1/page, /agent/v2/page       the store's help page with the chat (what a customer sees)
  *   GET  /admin                               internal panel: refunds and emails that really happened
- * Model: ZB_DEMO_MODEL (default gpt-4o-mini). OPENAI_BASE_URL can point to another compatible server.
+ * Model: ZB_DEMO_MODEL (default gpt-4.1: with gpt-4o-mini, v1 skipped decision emails and mistyped addresses in real runs). OPENAI_BASE_URL can point to another compatible server.
  *
  * Test orders (like Stripe's test cards, any suffix works):
  *   TEST-OK-...    delivered 5 days ago, 49.90 USD          -> refundable
@@ -42,7 +42,7 @@ if (envFile) {
   }
 }
 const keyStatus = () => process.env.OPENAI_API_KEY
-  ? `OpenAI: clave encontrada${envFile ? ' en ' + envFile : ' (variable de entorno)'} · modelo ${process.env.ZB_DEMO_MODEL || 'gpt-4o-mini'}`
+  ? `OpenAI: clave encontrada${envFile ? ' en ' + envFile : ' (variable de entorno)'} · modelo ${process.env.ZB_DEMO_MODEL || 'gpt-4.1'}`
   : `OpenAI: NO encontré OPENAI_API_KEY. Busqué en: ${envFiles.join(' y ')}. El agente no podrá responder.`;
 
 const refunds = [];
@@ -113,7 +113,7 @@ async function runAgent(version, message) {
   for (let turn = 0; turn < 8; turn++) {
     let r;
     try {
-      r = await fetch(base + '/chat/completions', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key }, body: JSON.stringify({ model: process.env.ZB_DEMO_MODEL || 'gpt-4o-mini', messages, tools: TOOL_DEFS }) });
+      r = await fetch(base + '/chat/completions', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key }, body: JSON.stringify({ model: process.env.ZB_DEMO_MODEL || 'gpt-4.1', messages, tools: TOOL_DEFS }) });
     } catch (e) {
       return 'Error del modelo: no me pude conectar con ' + base + ' (' + e.message + ').';
     }
