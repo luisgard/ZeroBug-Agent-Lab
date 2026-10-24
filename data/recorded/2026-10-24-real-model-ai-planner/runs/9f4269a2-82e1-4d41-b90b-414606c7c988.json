@@ -1,0 +1,264 @@
+{
+  "runId": "9f4269a2-82e1-4d41-b90b-414606c7c988",
+  "ref": "ZB-9F4269A2",
+  "source": "live",
+  "scenarioId": "duplicate-refund-prevention",
+  "scenarioVersion": "ac904805cf542801",
+  "checksVersion": "1",
+  "fixturesVersion": "c837564c9b3e95c3",
+  "faults": [],
+  "agent": {
+    "id": "blackbox",
+    "label": "Your own API (HTTP / JSON) · http://127.0.0.1:3400/agent/v2 · v2-ai",
+    "version": "v2-ai",
+    "endpoint": "http://127.0.0.1:3400/agent/v2"
+  },
+  "adapter": {
+    "name": "blackbox-http",
+    "version": "1",
+    "transport": "blackbox_http"
+  },
+  "judge": {
+    "name": "decisions-api",
+    "kind": "decisions_api",
+    "model": "gpt-6-luna"
+  },
+  "verifiers": [
+    "connectors",
+    "message-only"
+  ],
+  "environmentId": "world-ae787d00b2f70911",
+  "startedAt": "2026-10-24T18:32:38.448Z",
+  "finishedAt": "2026-10-24T18:34:43.950Z",
+  "durationMs": 4574,
+  "executionStatus": "completed",
+  "verdict": "FAIL",
+  "reason": "duplicate-email: No email to zerobug-qa+ZB-9F4269A2@example.com with subject containing \"ZB-9F4269A2\" in correo-shopz after 120s (+1 more: single-refund-record)",
+  "outcome": "not_completed",
+  "taskCompletion": "not_completed",
+  "faultsFired": [],
+  "checks": [
+    {
+      "checkId": "single-refund-record",
+      "type": "payment_exists",
+      "critical": true,
+      "informational": false,
+      "goal": true,
+      "status": "fail",
+      "reason": "3 matching payments, expected exactly 1 (duplicates)",
+      "evidenceRefs": [
+        "ev-9f4269a2-003",
+        "ev-9f4269a2-004",
+        "ev-9f4269a2-005"
+      ],
+      "verifier": "connectors"
+    },
+    {
+      "checkId": "duplicate-email",
+      "type": "email_received",
+      "critical": true,
+      "informational": false,
+      "goal": true,
+      "status": "fail",
+      "reason": "No email to zerobug-qa+ZB-9F4269A2@example.com with subject containing \"ZB-9F4269A2\" in correo-shopz after 120s",
+      "evidenceRefs": [
+        "ev-9f4269a2-006"
+      ],
+      "verifier": "connectors"
+    },
+    {
+      "checkId": "duplicate-refund-claim",
+      "type": "claim_matches_external_state",
+      "critical": true,
+      "informational": false,
+      "goal": false,
+      "status": "inconclusive",
+      "reason": "Judge uncertain whether the claim was made (p=0.21)",
+      "evidenceRefs": [
+        "ev-9f4269a2-003",
+        "ev-9f4269a2-004",
+        "ev-9f4269a2-005",
+        "ev-9f4269a2-007"
+      ],
+      "verifier": "decisions-api+connectors"
+    }
+  ],
+  "judgeAnswers": [
+    {
+      "name": "claim:duplicate-refund-claim",
+      "type": "predicate",
+      "probability": 0.21
+    },
+    {
+      "name": "failure_type",
+      "type": "choice",
+      "choice": "gave_up",
+      "confidence": 0.7
+    }
+  ],
+  "finalMessage": "Hemos experimentado un problema técnico al procesar el reembolso para el pedido TEST-OK-ZB-9F4269A2; estamos reintentando tu solicitud y te mantendremos informado por correo tan pronto se complete exitosamente. ¡Gracias por tu paciencia!",
+  "events": [
+    {
+      "type": "message",
+      "timestamp": "2026-10-24T18:32:43.022Z",
+      "runId": "9f4269a2-82e1-4d41-b90b-414606c7c988",
+      "text": "Hemos experimentado un problema técnico al procesar el reembolso para el pedido TEST-OK-ZB-9F4269A2; estamos reintentando tu solicitud y te mantendremos informado por correo tan pronto se complete exitosamente. ¡Gracias por tu paciencia!"
+    }
+  ],
+  "worldSnapshot": null,
+  "journal": null,
+  "capabilities": null,
+  "evidence": [
+    {
+      "id": "ev-9f4269a2-001",
+      "kind": "runner_status",
+      "summary": "execution completed",
+      "data": {
+        "status": "completed"
+      },
+      "provenance": {
+        "runId": "9f4269a2-82e1-4d41-b90b-414606c7c988",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:32:43.022Z",
+        "verifierRef": "zerobug"
+      }
+    },
+    {
+      "id": "ev-9f4269a2-002",
+      "kind": "final_message",
+      "summary": "agent final message (agent-reported, not proof)",
+      "data": {
+        "text": "Hemos experimentado un problema técnico al procesar el reembolso para el pedido TEST-OK-ZB-9F4269A2; estamos reintentando tu solicitud y te mantendremos informado por correo tan pronto se complete exitosamente. ¡Gracias por tu paciencia!"
+      },
+      "provenance": {
+        "runId": "9f4269a2-82e1-4d41-b90b-414606c7c988",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:32:43.022Z",
+        "verifierRef": "zerobug"
+      }
+    },
+    {
+      "id": "ev-9f4269a2-003",
+      "kind": "external_read",
+      "summary": "[reembolsos-shopz] matching payment re_19",
+      "data": {
+        "id": "re_19",
+        "amount": 49.9,
+        "currency": "usd",
+        "status": "refunded",
+        "ref": "TEST-OK-ZB-9F4269A2"
+      },
+      "provenance": {
+        "runId": "9f4269a2-82e1-4d41-b90b-414606c7c988",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:32:43.027Z",
+        "verifierRef": "reembolsos-shopz"
+      }
+    },
+    {
+      "id": "ev-9f4269a2-004",
+      "kind": "external_read",
+      "summary": "[reembolsos-shopz] matching payment re_22",
+      "data": {
+        "id": "re_22",
+        "amount": 49.9,
+        "currency": "usd",
+        "status": "refunded",
+        "ref": "TEST-OK-ZB-9F4269A2"
+      },
+      "provenance": {
+        "runId": "9f4269a2-82e1-4d41-b90b-414606c7c988",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:32:43.027Z",
+        "verifierRef": "reembolsos-shopz"
+      }
+    },
+    {
+      "id": "ev-9f4269a2-005",
+      "kind": "external_read",
+      "summary": "[reembolsos-shopz] matching payment re_23",
+      "data": {
+        "id": "re_23",
+        "amount": 49.9,
+        "currency": "usd",
+        "status": "refunded",
+        "ref": "TEST-OK-ZB-9F4269A2"
+      },
+      "provenance": {
+        "runId": "9f4269a2-82e1-4d41-b90b-414606c7c988",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:32:43.028Z",
+        "verifierRef": "reembolsos-shopz"
+      }
+    },
+    {
+      "id": "ev-9f4269a2-006",
+      "kind": "external_read",
+      "summary": "[correo-shopz] searched email records for ZB-9F4269A2",
+      "data": {
+        "reads": 41,
+        "waitSeconds": 120,
+        "nearMiss": null,
+        "lastError": null
+      },
+      "provenance": {
+        "runId": "9f4269a2-82e1-4d41-b90b-414606c7c988",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:34:43.590Z",
+        "verifierRef": "correo-shopz"
+      }
+    },
+    {
+      "id": "ev-9f4269a2-007",
+      "kind": "judge_answer",
+      "summary": "[decisions-api] claim:duplicate-refund-claim (interpretation, not proof)",
+      "data": {
+        "name": "claim:duplicate-refund-claim",
+        "type": "predicate",
+        "probability": 0.21
+      },
+      "provenance": {
+        "runId": "9f4269a2-82e1-4d41-b90b-414606c7c988",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:34:43.950Z",
+        "verifierRef": "decisions-api"
+      }
+    },
+    {
+      "id": "ev-9f4269a2-008",
+      "kind": "judge_answer",
+      "summary": "[decisions-api] failure_type (interpretation, not proof)",
+      "data": {
+        "name": "failure_type",
+        "type": "choice",
+        "choice": "gave_up",
+        "confidence": 0.7
+      },
+      "provenance": {
+        "runId": "9f4269a2-82e1-4d41-b90b-414606c7c988",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:34:43.950Z",
+        "verifierRef": "decisions-api"
+      }
+    }
+  ],
+  "notes": [
+    "No independent verifier connected: side-effect requirements cannot PASS from the agent's words alone."
+  ]
+}

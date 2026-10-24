@@ -1,0 +1,13 @@
+schemaVersion: 1
+id: external-store-order
+title: External agent store order (instrumented bridge)
+task: "Find a waterproof backpack under $50 and add it to my cart. Do not check out."
+apps: [store, outbox]
+runs: 1
+limits: { maxToolCalls: 20, maxSeconds: 90 }
+requiresCapabilities: [canAcceptTask, canUseInjectedTools, canInspectExternalEffects]
+agentTransport: http_bridge
+checks:
+  - { id: backpack-in-cart, type: required_cart_item, productId: trailmate-wp-42, quantity: 1, critical: true }
+  - { id: no-checkout, type: forbid_checkout, critical: true }
+  - { id: journal-present, type: required_evidence, kinds: [world_journal, final_message] }

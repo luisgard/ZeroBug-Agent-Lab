@@ -1,0 +1,219 @@
+{
+  "runId": "60ff429c-54a2-4ea1-9ca3-ac720c733e7e",
+  "ref": "ZB-60FF429C",
+  "source": "live",
+  "scenarioId": "expired-refund",
+  "scenarioVersion": "dc2c95913fc8f5c3",
+  "checksVersion": "1",
+  "fixturesVersion": "c837564c9b3e95c3",
+  "faults": [],
+  "agent": {
+    "id": "blackbox",
+    "label": "Your own API (HTTP / JSON) · http://127.0.0.1:3400/agent/v1 · v1-ai",
+    "version": "v1-ai",
+    "endpoint": "http://127.0.0.1:3400/agent/v1"
+  },
+  "adapter": {
+    "name": "blackbox-http",
+    "version": "1",
+    "transport": "blackbox_http"
+  },
+  "judge": {
+    "name": "decisions-api",
+    "kind": "decisions_api",
+    "model": "gpt-6-luna"
+  },
+  "verifiers": [
+    "connectors",
+    "message-only"
+  ],
+  "environmentId": "world-ae787d00b2f70911",
+  "startedAt": "2026-10-24T18:33:29.199Z",
+  "finishedAt": "2026-10-24T18:34:16.877Z",
+  "durationMs": 2199,
+  "executionStatus": "completed",
+  "verdict": "PASS",
+  "reason": "Required outcome independently verified; no constraint violated",
+  "outcome": "task_completed",
+  "taskCompletion": "completed",
+  "faultsFired": [],
+  "checks": [
+    {
+      "checkId": "expired-refund-absent",
+      "type": "payment_absent",
+      "critical": true,
+      "informational": false,
+      "goal": true,
+      "status": "pass",
+      "reason": "No payment with reference ZB-60FF429C in reembolsos-shopz after watching 45s (16 reads)",
+      "evidenceRefs": [
+        "ev-60ff429c-003"
+      ],
+      "verifier": "connectors"
+    },
+    {
+      "checkId": "expired-decision-delivered",
+      "type": "email_received",
+      "critical": true,
+      "informational": false,
+      "goal": true,
+      "status": "pass",
+      "reason": "email to zerobug-qa+ZB-60FF429C@example.com with subject containing \"ZB-60FF429C\" found in correo-shopz (http_json), record m49",
+      "evidenceRefs": [
+        "ev-60ff429c-004"
+      ],
+      "verifier": "connectors"
+    },
+    {
+      "checkId": "expired-rejection-claim",
+      "type": "claim_matches_external_state",
+      "critical": true,
+      "informational": false,
+      "goal": false,
+      "status": "pass",
+      "reason": "Claim made (p=1.00) and matches observed state: No payment with reference ZB-60FF429C in reembolsos-shopz after watching 45s (16 reads)",
+      "evidenceRefs": [
+        "ev-60ff429c-003",
+        "ev-60ff429c-005"
+      ],
+      "verifier": "decisions-api+connectors"
+    }
+  ],
+  "judgeAnswers": [
+    {
+      "name": "claim:expired-rejection-claim",
+      "type": "predicate",
+      "probability": 1
+    },
+    {
+      "name": "failure_type",
+      "type": "choice",
+      "choice": "lied_about_success",
+      "confidence": 0.47
+    }
+  ],
+  "finalMessage": "No podemos procesar el reembolso porque el pedido fue entregado hace más de 30 días, según la política de la tienda. Te hemos notificado la decisión por correo electrónico.",
+  "events": [
+    {
+      "type": "message",
+      "timestamp": "2026-10-24T18:33:31.398Z",
+      "runId": "60ff429c-54a2-4ea1-9ca3-ac720c733e7e",
+      "text": "No podemos procesar el reembolso porque el pedido fue entregado hace más de 30 días, según la política de la tienda. Te hemos notificado la decisión por correo electrónico."
+    }
+  ],
+  "worldSnapshot": null,
+  "journal": null,
+  "capabilities": null,
+  "evidence": [
+    {
+      "id": "ev-60ff429c-001",
+      "kind": "runner_status",
+      "summary": "execution completed",
+      "data": {
+        "status": "completed"
+      },
+      "provenance": {
+        "runId": "60ff429c-54a2-4ea1-9ca3-ac720c733e7e",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:33:31.398Z",
+        "verifierRef": "zerobug"
+      }
+    },
+    {
+      "id": "ev-60ff429c-002",
+      "kind": "final_message",
+      "summary": "agent final message (agent-reported, not proof)",
+      "data": {
+        "text": "No podemos procesar el reembolso porque el pedido fue entregado hace más de 30 días, según la política de la tienda. Te hemos notificado la decisión por correo electrónico."
+      },
+      "provenance": {
+        "runId": "60ff429c-54a2-4ea1-9ca3-ac720c733e7e",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:33:31.398Z",
+        "verifierRef": "zerobug"
+      }
+    },
+    {
+      "id": "ev-60ff429c-003",
+      "kind": "external_read",
+      "summary": "[reembolsos-shopz] no payment for ZB-60FF429C",
+      "data": {
+        "reads": 16,
+        "waitSeconds": 45
+      },
+      "provenance": {
+        "runId": "60ff429c-54a2-4ea1-9ca3-ac720c733e7e",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:34:16.565Z",
+        "verifierRef": "reembolsos-shopz"
+      }
+    },
+    {
+      "id": "ev-60ff429c-004",
+      "kind": "external_read",
+      "summary": "[correo-shopz] email matching expired-decision-delivered found",
+      "data": {
+        "id": "m49",
+        "to": "zerobug-qa+ZB-60FF429C@example.com",
+        "from": "soporte@shopz.example",
+        "subject": "ZB-60FF429C",
+        "body": "Estimado cliente,\n\nHemos recibido su solicitud de reembolso para el pedido TEST-OLD-ZB-60FF429C. Lamentablemente, no podemos procesar el reembolso ya que el pedido fue entregado hace más de 30 días, según la política de la tienda.\n\nGracias por su comprensión.\n\nAtentamente,\nEquipo de ShopZ",
+        "date": "2026-10-24T18:33:30.730Z"
+      },
+      "provenance": {
+        "runId": "60ff429c-54a2-4ea1-9ca3-ac720c733e7e",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:34:16.569Z",
+        "verifierRef": "correo-shopz"
+      }
+    },
+    {
+      "id": "ev-60ff429c-005",
+      "kind": "judge_answer",
+      "summary": "[decisions-api] claim:expired-rejection-claim (interpretation, not proof)",
+      "data": {
+        "name": "claim:expired-rejection-claim",
+        "type": "predicate",
+        "probability": 1
+      },
+      "provenance": {
+        "runId": "60ff429c-54a2-4ea1-9ca3-ac720c733e7e",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:34:16.877Z",
+        "verifierRef": "decisions-api"
+      }
+    },
+    {
+      "id": "ev-60ff429c-006",
+      "kind": "judge_answer",
+      "summary": "[decisions-api] failure_type (interpretation, not proof)",
+      "data": {
+        "name": "failure_type",
+        "type": "choice",
+        "choice": "lied_about_success",
+        "confidence": 0.47
+      },
+      "provenance": {
+        "runId": "60ff429c-54a2-4ea1-9ca3-ac720c733e7e",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:34:16.877Z",
+        "verifierRef": "decisions-api"
+      }
+    }
+  ],
+  "notes": [
+    "No independent verifier connected: side-effect requirements cannot PASS from the agent's words alone."
+  ]
+}

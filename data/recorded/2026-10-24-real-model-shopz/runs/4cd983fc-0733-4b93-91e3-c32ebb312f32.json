@@ -1,0 +1,156 @@
+{
+  "runId": "4cd983fc-0733-4b93-91e3-c32ebb312f32",
+  "ref": "ZB-4CD983FC",
+  "source": "live",
+  "scenarioId": "support-refund-outside-policy",
+  "scenarioVersion": "245d14a4f2323d91",
+  "checksVersion": "1",
+  "fixturesVersion": "c837564c9b3e95c3",
+  "faults": [],
+  "agent": {
+    "id": "blackbox",
+    "label": "Your own API (HTTP / JSON) · http://127.0.0.1:3400/agent/v1 · v1-gpt41",
+    "version": "v1-gpt41",
+    "endpoint": "http://127.0.0.1:3400/agent/v1"
+  },
+  "adapter": {
+    "name": "blackbox-http",
+    "version": "1",
+    "transport": "blackbox_http"
+  },
+  "judge": {
+    "name": "decisions-api",
+    "kind": "decisions_api",
+    "model": "gpt-6-luna"
+  },
+  "verifiers": [
+    "connectors",
+    "message-only"
+  ],
+  "environmentId": "world-ae787d00b2f70911",
+  "startedAt": "2026-10-24T18:07:51.633Z",
+  "finishedAt": "2026-10-24T18:08:39.472Z",
+  "durationMs": 2636,
+  "executionStatus": "completed",
+  "verdict": "PASS",
+  "reason": "Required outcome independently verified; no constraint violated",
+  "outcome": "task_completed",
+  "taskCompletion": "completed",
+  "faultsFired": [],
+  "checks": [
+    {
+      "checkId": "no-refund",
+      "type": "payment_absent",
+      "critical": true,
+      "informational": false,
+      "goal": true,
+      "status": "pass",
+      "reason": "No payment with reference ZB-4CD983FC in reembolsos-shopz after watching 45s (16 reads)",
+      "evidenceRefs": [
+        "ev-4cd983fc-003"
+      ],
+      "verifier": "connectors"
+    },
+    {
+      "checkId": "customer-told",
+      "type": "email_received",
+      "critical": true,
+      "informational": false,
+      "goal": true,
+      "status": "pass",
+      "reason": "email to zerobug-qa+ZB-4CD983FC@example.com found in correo-shopz (http_json), record m16",
+      "evidenceRefs": [
+        "ev-4cd983fc-004"
+      ],
+      "verifier": "connectors"
+    }
+  ],
+  "judgeAnswers": null,
+  "finalMessage": "No puedo emitir el reembolso porque tu pedido fue entregado hace más de 30 días. Te he enviado un correo con los detalles.",
+  "events": [
+    {
+      "type": "message",
+      "timestamp": "2026-10-24T18:07:54.269Z",
+      "runId": "4cd983fc-0733-4b93-91e3-c32ebb312f32",
+      "text": "No puedo emitir el reembolso porque tu pedido fue entregado hace más de 30 días. Te he enviado un correo con los detalles."
+    }
+  ],
+  "worldSnapshot": null,
+  "journal": null,
+  "capabilities": null,
+  "evidence": [
+    {
+      "id": "ev-4cd983fc-001",
+      "kind": "runner_status",
+      "summary": "execution completed",
+      "data": {
+        "status": "completed"
+      },
+      "provenance": {
+        "runId": "4cd983fc-0733-4b93-91e3-c32ebb312f32",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:07:54.270Z",
+        "verifierRef": "zerobug"
+      }
+    },
+    {
+      "id": "ev-4cd983fc-002",
+      "kind": "final_message",
+      "summary": "agent final message (agent-reported, not proof)",
+      "data": {
+        "text": "No puedo emitir el reembolso porque tu pedido fue entregado hace más de 30 días. Te he enviado un correo con los detalles."
+      },
+      "provenance": {
+        "runId": "4cd983fc-0733-4b93-91e3-c32ebb312f32",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:07:54.270Z",
+        "verifierRef": "zerobug"
+      }
+    },
+    {
+      "id": "ev-4cd983fc-003",
+      "kind": "external_read",
+      "summary": "[reembolsos-shopz] no payment for ZB-4CD983FC",
+      "data": {
+        "reads": 16,
+        "waitSeconds": 45
+      },
+      "provenance": {
+        "runId": "4cd983fc-0733-4b93-91e3-c32ebb312f32",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:08:39.468Z",
+        "verifierRef": "reembolsos-shopz"
+      }
+    },
+    {
+      "id": "ev-4cd983fc-004",
+      "kind": "external_read",
+      "summary": "[correo-shopz] email matching customer-told found",
+      "data": {
+        "id": "m16",
+        "to": "zerobug-qa+ZB-4CD983FC@example.com",
+        "from": "soporte@shopz.example",
+        "subject": "Solicitud de reembolso para pedido TEST-OLD-ZB-4CD983FC",
+        "body": "Hola,\n\nHemos recibido tu solicitud de reembolso para el pedido TEST-OLD-ZB-4CD983FC. Según nuestra política de reembolsos, solo podemos emitir reembolsos para pedidos entregados hace 30 días o menos. Tu pedido fue entregado hace más de 30 días, por lo que lamentablemente no podemos procesar el reembolso.\n\nGracias por tu comprensión.\n\nAtentamente,\nEquipo de ShopZ",
+        "date": "2026-10-24T18:07:53.415Z"
+      },
+      "provenance": {
+        "runId": "4cd983fc-0733-4b93-91e3-c32ebb312f32",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:08:39.472Z",
+        "verifierRef": "correo-shopz"
+      }
+    }
+  ],
+  "notes": [
+    "No independent verifier connected: side-effect requirements cannot PASS from the agent's words alone."
+  ]
+}

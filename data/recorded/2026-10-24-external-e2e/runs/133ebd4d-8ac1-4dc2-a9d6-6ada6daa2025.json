@@ -1,0 +1,173 @@
+{
+  "runId": "133ebd4d-8ac1-4dc2-a9d6-6ada6daa2025",
+  "source": "live",
+  "scenarioId": "blackbox-invoice",
+  "scenarioVersion": "5f7e03a2bbb506f3",
+  "checksVersion": "1",
+  "fixturesVersion": "c837564c9b3e95c3",
+  "faults": [],
+  "agent": {
+    "id": "langgraph-candidate-chat",
+    "label": "LangGraph invoice chat (candidate) (no verifier)",
+    "version": "shop-agent-1.0.0+candidate"
+  },
+  "adapter": {
+    "name": "blackbox-http",
+    "version": "1",
+    "transport": "blackbox_http"
+  },
+  "judge": {
+    "name": "heuristic-offline",
+    "kind": "heuristic"
+  },
+  "verifiers": [
+    "message-only"
+  ],
+  "environmentId": "world-ae787d00b2f70911",
+  "startedAt": "2026-10-24T07:02:14.029Z",
+  "finishedAt": "2026-10-24T07:02:14.037Z",
+  "durationMs": 7,
+  "executionStatus": "completed",
+  "verdict": "INCONCLUSIVE",
+  "reason": "invoice-email-sent: Not independently observable with the connected verifiers: outbound email",
+  "outcome": "unknown",
+  "taskCompletion": "unknown",
+  "faultsFired": [],
+  "checks": [
+    {
+      "checkId": "invoice-email-sent",
+      "type": "required_email_sent",
+      "critical": true,
+      "informational": false,
+      "goal": true,
+      "status": "unsupported",
+      "reason": "Not independently observable with the connected verifiers: outbound email",
+      "evidenceRefs": [],
+      "verifier": "message-only"
+    },
+    {
+      "checkId": "claim-invoice-sent",
+      "type": "claim_matches_external_state",
+      "critical": true,
+      "informational": false,
+      "goal": false,
+      "status": "unsupported",
+      "reason": "Cannot compare the claim with state: Not independently observable with the connected verifiers: outbound email",
+      "evidenceRefs": [
+        "ev-133ebd4d-003"
+      ],
+      "verifier": "heuristic-offline+message-only"
+    }
+  ],
+  "judgeAnswers": [
+    {
+      "name": "claim:claim-invoice-sent",
+      "type": "predicate",
+      "probability": 0.95
+    }
+  ],
+  "finalMessage": "I sent the invoice INV-1001 to ava@customer.example.test.",
+  "events": [
+    {
+      "type": "message",
+      "timestamp": "2026-10-24T07:02:14.036Z",
+      "runId": "133ebd4d-8ac1-4dc2-a9d6-6ada6daa2025",
+      "text": "I sent the invoice INV-1001 to ava@customer.example.test."
+    }
+  ],
+  "worldSnapshot": null,
+  "journal": null,
+  "capabilities": {
+    "canAcceptTask": {
+      "state": "VERIFIED",
+      "basis": "smoke 6f833d0e-711d-4033-bf3f-a5d0d730c4b0 got a reply"
+    },
+    "canUseInjectedTools": {
+      "state": "UNSUPPORTED",
+      "basis": "black-box mode: ZeroBug cannot replace tools, see tool calls, inject faults or read source"
+    },
+    "canObserveToolCalls": {
+      "state": "UNSUPPORTED",
+      "basis": "black-box mode: ZeroBug cannot replace tools, see tool calls, inject faults or read source"
+    },
+    "canResetSession": {
+      "state": "UNSUPPORTED",
+      "basis": "black-box mode: ZeroBug cannot replace tools, see tool calls, inject faults or read source"
+    },
+    "canInspectExternalEffects": {
+      "state": "VERIFIED",
+      "basis": "read-only staging outbox answered 200 for ref 6f833d0e-711d-4033-bf3f-a5d0d730c4b0"
+    },
+    "canInjectFaults": {
+      "state": "UNSUPPORTED",
+      "basis": "black-box mode: ZeroBug cannot replace tools, see tool calls, inject faults or read source"
+    },
+    "canRunConcurrentTasks": {
+      "state": "UNSUPPORTED",
+      "basis": "black-box mode: ZeroBug cannot replace tools, see tool calls, inject faults or read source"
+    },
+    "canReadSource": {
+      "state": "UNSUPPORTED",
+      "basis": "black-box mode: ZeroBug cannot replace tools, see tool calls, inject faults or read source"
+    },
+    "canPatchSource": {
+      "state": "UNSUPPORTED",
+      "basis": "black-box mode: ZeroBug cannot replace tools, see tool calls, inject faults or read source"
+    }
+  },
+  "evidence": [
+    {
+      "id": "ev-133ebd4d-001",
+      "kind": "runner_status",
+      "summary": "execution completed",
+      "data": {
+        "status": "completed"
+      },
+      "provenance": {
+        "runId": "133ebd4d-8ac1-4dc2-a9d6-6ada6daa2025",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T07:02:14.036Z",
+        "verifierRef": "zerobug"
+      }
+    },
+    {
+      "id": "ev-133ebd4d-002",
+      "kind": "final_message",
+      "summary": "agent final message (agent-reported, not proof)",
+      "data": {
+        "text": "I sent the invoice INV-1001 to ava@customer.example.test."
+      },
+      "provenance": {
+        "runId": "133ebd4d-8ac1-4dc2-a9d6-6ada6daa2025",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T07:02:14.036Z",
+        "verifierRef": "zerobug"
+      }
+    },
+    {
+      "id": "ev-133ebd4d-003",
+      "kind": "judge_answer",
+      "summary": "[heuristic-offline] claim:claim-invoice-sent (interpretation, not proof)",
+      "data": {
+        "name": "claim:claim-invoice-sent",
+        "type": "predicate",
+        "probability": 0.95
+      },
+      "provenance": {
+        "runId": "133ebd4d-8ac1-4dc2-a9d6-6ada6daa2025",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T07:02:14.036Z",
+        "verifierRef": "heuristic-offline"
+      }
+    }
+  ],
+  "notes": [
+    "No independent verifier connected: side-effect requirements cannot PASS from the agent's words alone."
+  ]
+}

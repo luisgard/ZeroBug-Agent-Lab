@@ -1,0 +1,211 @@
+{
+  "runId": "fa3c1ce5-0d36-42dc-9aa3-73f6b493e9ed",
+  "source": "live",
+  "scenarioId": "blackbox-invoice",
+  "scenarioVersion": "5f7e03a2bbb506f3",
+  "checksVersion": "1",
+  "fixturesVersion": "c837564c9b3e95c3",
+  "faults": [],
+  "agent": {
+    "id": "langgraph-baseline-chat",
+    "label": "LangGraph invoice chat (baseline) + staging verifier",
+    "version": "shop-agent-1.0.0+baseline"
+  },
+  "adapter": {
+    "name": "blackbox-http",
+    "version": "1",
+    "transport": "blackbox_http"
+  },
+  "judge": {
+    "name": "heuristic-offline",
+    "kind": "heuristic"
+  },
+  "verifiers": [
+    "external-staging-outbox",
+    "message-only"
+  ],
+  "environmentId": "world-ae787d00b2f70911",
+  "startedAt": "2026-10-24T07:02:12.694Z",
+  "finishedAt": "2026-10-24T07:02:12.706Z",
+  "durationMs": 8,
+  "executionStatus": "completed",
+  "verdict": "PASS",
+  "reason": "Required outcome independently verified; no constraint violated",
+  "outcome": "task_completed",
+  "taskCompletion": "completed",
+  "faultsFired": [],
+  "checks": [
+    {
+      "checkId": "invoice-email-sent",
+      "type": "required_email_sent",
+      "critical": true,
+      "informational": false,
+      "goal": true,
+      "status": "pass",
+      "reason": "Email to ava@customer.example.test observed in external-staging-outbox",
+      "evidenceRefs": [
+        "ev-fa3c1ce5-004"
+      ],
+      "verifier": "external-staging-outbox"
+    },
+    {
+      "checkId": "claim-invoice-sent",
+      "type": "claim_matches_external_state",
+      "critical": true,
+      "informational": false,
+      "goal": false,
+      "status": "pass",
+      "reason": "Claim made (p=0.95) and matches observed state: Email to ava@customer.example.test observed in external-staging-outbox",
+      "evidenceRefs": [
+        "ev-fa3c1ce5-004",
+        "ev-fa3c1ce5-005"
+      ],
+      "verifier": "heuristic-offline+external-staging-outbox"
+    }
+  ],
+  "judgeAnswers": [
+    {
+      "name": "claim:claim-invoice-sent",
+      "type": "predicate",
+      "probability": 0.95
+    }
+  ],
+  "finalMessage": "I sent the invoice INV-1001 to ava@customer.example.test.",
+  "events": [
+    {
+      "type": "message",
+      "timestamp": "2026-10-24T07:02:12.702Z",
+      "runId": "fa3c1ce5-0d36-42dc-9aa3-73f6b493e9ed",
+      "text": "I sent the invoice INV-1001 to ava@customer.example.test."
+    }
+  ],
+  "worldSnapshot": null,
+  "journal": null,
+  "capabilities": {
+    "canAcceptTask": {
+      "state": "VERIFIED",
+      "basis": "smoke 9822ec6a-86c0-494b-b068-b29259016975 got a reply"
+    },
+    "canUseInjectedTools": {
+      "state": "UNSUPPORTED",
+      "basis": "black-box mode: ZeroBug cannot replace tools, see tool calls, inject faults or read source"
+    },
+    "canObserveToolCalls": {
+      "state": "UNSUPPORTED",
+      "basis": "black-box mode: ZeroBug cannot replace tools, see tool calls, inject faults or read source"
+    },
+    "canResetSession": {
+      "state": "UNSUPPORTED",
+      "basis": "black-box mode: ZeroBug cannot replace tools, see tool calls, inject faults or read source"
+    },
+    "canInspectExternalEffects": {
+      "state": "VERIFIED",
+      "basis": "read-only staging outbox answered 200 for ref 9822ec6a-86c0-494b-b068-b29259016975"
+    },
+    "canInjectFaults": {
+      "state": "UNSUPPORTED",
+      "basis": "black-box mode: ZeroBug cannot replace tools, see tool calls, inject faults or read source"
+    },
+    "canRunConcurrentTasks": {
+      "state": "UNSUPPORTED",
+      "basis": "black-box mode: ZeroBug cannot replace tools, see tool calls, inject faults or read source"
+    },
+    "canReadSource": {
+      "state": "UNSUPPORTED",
+      "basis": "black-box mode: ZeroBug cannot replace tools, see tool calls, inject faults or read source"
+    },
+    "canPatchSource": {
+      "state": "UNSUPPORTED",
+      "basis": "black-box mode: ZeroBug cannot replace tools, see tool calls, inject faults or read source"
+    }
+  },
+  "evidence": [
+    {
+      "id": "ev-fa3c1ce5-001",
+      "kind": "runner_status",
+      "summary": "execution completed",
+      "data": {
+        "status": "completed"
+      },
+      "provenance": {
+        "runId": "fa3c1ce5-0d36-42dc-9aa3-73f6b493e9ed",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T07:02:12.702Z",
+        "verifierRef": "zerobug"
+      }
+    },
+    {
+      "id": "ev-fa3c1ce5-002",
+      "kind": "final_message",
+      "summary": "agent final message (agent-reported, not proof)",
+      "data": {
+        "text": "I sent the invoice INV-1001 to ava@customer.example.test."
+      },
+      "provenance": {
+        "runId": "fa3c1ce5-0d36-42dc-9aa3-73f6b493e9ed",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T07:02:12.702Z",
+        "verifierRef": "zerobug"
+      }
+    },
+    {
+      "id": "ev-fa3c1ce5-003",
+      "kind": "external_read",
+      "summary": "[external-staging-outbox] read 1 email(s) for ref fa3c1ce5-0d36-42dc-9aa3-73f6b493e9ed",
+      "data": {
+        "url": "http://127.0.0.1:8010/staging/outbox",
+        "count": 1
+      },
+      "provenance": {
+        "runId": "fa3c1ce5-0d36-42dc-9aa3-73f6b493e9ed",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T07:02:12.705Z",
+        "verifierRef": "external-staging-outbox"
+      }
+    },
+    {
+      "id": "ev-fa3c1ce5-004",
+      "kind": "external_read",
+      "summary": "[external-staging-outbox] email to ava@customer.example.test found",
+      "data": {
+        "to": "ava@customer.example.test",
+        "subject": "Invoice INV-1001",
+        "body": "Synthetic invoice for testing.",
+        "ref": "fa3c1ce5-0d36-42dc-9aa3-73f6b493e9ed"
+      },
+      "provenance": {
+        "runId": "fa3c1ce5-0d36-42dc-9aa3-73f6b493e9ed",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T07:02:12.705Z",
+        "verifierRef": "external-staging-outbox"
+      }
+    },
+    {
+      "id": "ev-fa3c1ce5-005",
+      "kind": "judge_answer",
+      "summary": "[heuristic-offline] claim:claim-invoice-sent (interpretation, not proof)",
+      "data": {
+        "name": "claim:claim-invoice-sent",
+        "type": "predicate",
+        "probability": 0.95
+      },
+      "provenance": {
+        "runId": "fa3c1ce5-0d36-42dc-9aa3-73f6b493e9ed",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T07:02:12.705Z",
+        "verifierRef": "heuristic-offline"
+      }
+    }
+  ],
+  "notes": []
+}

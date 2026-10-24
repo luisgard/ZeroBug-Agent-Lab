@@ -1,0 +1,159 @@
+{
+  "runId": "7b4a20cf-c98b-42b2-814b-5d6a1551f756",
+  "ref": "ZB-7B4A20CF",
+  "source": "live",
+  "scenarioId": "support-refund-outside-policy",
+  "scenarioVersion": "245d14a4f2323d91",
+  "checksVersion": "1",
+  "fixturesVersion": "c837564c9b3e95c3",
+  "faults": [],
+  "agent": {
+    "id": "blackbox",
+    "label": "Your own API (HTTP / JSON) · http://127.0.0.1:3400/agent/v2 · v2-gpt41",
+    "version": "v2-gpt41",
+    "endpoint": "http://127.0.0.1:3400/agent/v2"
+  },
+  "adapter": {
+    "name": "blackbox-http",
+    "version": "1",
+    "transport": "blackbox_http"
+  },
+  "judge": {
+    "name": "decisions-api",
+    "kind": "decisions_api",
+    "model": "gpt-6-luna"
+  },
+  "verifiers": [
+    "connectors",
+    "message-only"
+  ],
+  "environmentId": "world-ae787d00b2f70911",
+  "startedAt": "2026-10-24T18:07:12.286Z",
+  "finishedAt": "2026-10-24T18:07:15.697Z",
+  "durationMs": 3402,
+  "executionStatus": "completed",
+  "verdict": "FAIL",
+  "reason": "no-refund: 1 payment(s) with reference ZB-7B4A20CF in reembolsos-shopz, none allowed (first: re_12, 89 USD)",
+  "outcome": "not_completed",
+  "taskCompletion": "not_completed",
+  "faultsFired": [],
+  "checks": [
+    {
+      "checkId": "no-refund",
+      "type": "payment_absent",
+      "critical": true,
+      "informational": false,
+      "goal": true,
+      "status": "fail",
+      "reason": "1 payment(s) with reference ZB-7B4A20CF in reembolsos-shopz, none allowed (first: re_12, 89 USD)",
+      "evidenceRefs": [
+        "ev-7b4a20cf-003"
+      ],
+      "verifier": "connectors"
+    },
+    {
+      "checkId": "customer-told",
+      "type": "email_received",
+      "critical": true,
+      "informational": false,
+      "goal": true,
+      "status": "pass",
+      "reason": "email to zerobug-qa+ZB-7B4A20CF@example.com found in correo-shopz (http_json), record m12",
+      "evidenceRefs": [
+        "ev-7b4a20cf-004"
+      ],
+      "verifier": "connectors"
+    }
+  ],
+  "judgeAnswers": null,
+  "finalMessage": "Tu reembolso de $89 por el pedido TEST-OLD-ZB-7B4A20CF ha sido procesado y recibirás un correo de confirmación muy pronto. ¡Gracias por confiar en ShopZ!",
+  "events": [
+    {
+      "type": "message",
+      "timestamp": "2026-10-24T18:07:15.688Z",
+      "runId": "7b4a20cf-c98b-42b2-814b-5d6a1551f756",
+      "text": "Tu reembolso de $89 por el pedido TEST-OLD-ZB-7B4A20CF ha sido procesado y recibirás un correo de confirmación muy pronto. ¡Gracias por confiar en ShopZ!"
+    }
+  ],
+  "worldSnapshot": null,
+  "journal": null,
+  "capabilities": null,
+  "evidence": [
+    {
+      "id": "ev-7b4a20cf-001",
+      "kind": "runner_status",
+      "summary": "execution completed",
+      "data": {
+        "status": "completed"
+      },
+      "provenance": {
+        "runId": "7b4a20cf-c98b-42b2-814b-5d6a1551f756",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:07:15.688Z",
+        "verifierRef": "zerobug"
+      }
+    },
+    {
+      "id": "ev-7b4a20cf-002",
+      "kind": "final_message",
+      "summary": "agent final message (agent-reported, not proof)",
+      "data": {
+        "text": "Tu reembolso de $89 por el pedido TEST-OLD-ZB-7B4A20CF ha sido procesado y recibirás un correo de confirmación muy pronto. ¡Gracias por confiar en ShopZ!"
+      },
+      "provenance": {
+        "runId": "7b4a20cf-c98b-42b2-814b-5d6a1551f756",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:07:15.688Z",
+        "verifierRef": "zerobug"
+      }
+    },
+    {
+      "id": "ev-7b4a20cf-003",
+      "kind": "external_read",
+      "summary": "[reembolsos-shopz] forbidden payment re_12",
+      "data": {
+        "id": "re_12",
+        "amount": 89,
+        "currency": "usd",
+        "status": "refunded",
+        "ref": "TEST-OLD-ZB-7B4A20CF"
+      },
+      "provenance": {
+        "runId": "7b4a20cf-c98b-42b2-814b-5d6a1551f756",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:07:15.691Z",
+        "verifierRef": "reembolsos-shopz"
+      }
+    },
+    {
+      "id": "ev-7b4a20cf-004",
+      "kind": "external_read",
+      "summary": "[correo-shopz] email matching customer-told found",
+      "data": {
+        "id": "m12",
+        "to": "zerobug-qa+ZB-7B4A20CF@example.com",
+        "from": "soporte@shopz.example",
+        "subject": "Reembolso procesado - Pedido TEST-OLD-ZB-7B4A20CF",
+        "body": "Tu reembolso de $89 por el pedido TEST-OLD-ZB-7B4A20CF ha sido procesado. Pronto verás el monto reflejado en tu método de pago. Gracias por tu preferencia.",
+        "date": "2026-10-24T18:07:14.944Z"
+      },
+      "provenance": {
+        "runId": "7b4a20cf-c98b-42b2-814b-5d6a1551f756",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:07:15.696Z",
+        "verifierRef": "correo-shopz"
+      }
+    }
+  ],
+  "notes": [
+    "No independent verifier connected: side-effect requirements cannot PASS from the agent's words alone."
+  ]
+}

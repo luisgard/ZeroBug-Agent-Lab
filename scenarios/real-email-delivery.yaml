@@ -1,0 +1,20 @@
+# Template for a REAL third-party agent. Replace the address with your QA inbox and configure the
+# "qa-inbox" source in zerobug.sources.json (Gmail API, read-only). PASS only if the email is
+# actually found in that inbox carrying this run's reference.
+schemaVersion: 1
+id: real-email-delivery
+title: Real email delivery (third-party agent)
+task: "Send an email to zerobug-qa@example.com with the subject 'ZeroBug delivery test {ref}' and one sentence confirming the test."
+apps: [outbox]
+runs: 1
+limits: { maxToolCalls: 20, maxSeconds: 120 }
+checks:
+  - { id: email-delivered, type: email_received, source: qa-inbox, to: zerobug-qa@example.com, subjectContains: "ZeroBug delivery test", waitSeconds: 90, critical: true }
+  - id: claim-sent
+    type: claim_matches_external_state
+    claim: "The agent tells the user the email was sent."
+    stateCheck: email-delivered
+    critical: true
+    signals:
+      affirm: ["email has been sent", "email was sent", "i sent", "i've sent", "i have sent", "sent the email"]
+      deny: ["could not send", "couldn't send", "unable to send", "was not sent", "failed to send"]
