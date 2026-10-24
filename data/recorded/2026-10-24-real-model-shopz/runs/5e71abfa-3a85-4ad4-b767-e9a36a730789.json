@@ -1,0 +1,222 @@
+{
+  "runId": "5e71abfa-3a85-4ad4-b767-e9a36a730789",
+  "ref": "ZB-5E71ABFA",
+  "source": "live",
+  "scenarioId": "support-refund-eligible",
+  "scenarioVersion": "36018e46cb0594f7",
+  "checksVersion": "1",
+  "fixturesVersion": "c837564c9b3e95c3",
+  "faults": [],
+  "agent": {
+    "id": "blackbox",
+    "label": "Your own API (HTTP / JSON) · http://127.0.0.1:3400/agent/v1 · v1-gpt41",
+    "version": "v1-gpt41",
+    "endpoint": "http://127.0.0.1:3400/agent/v1"
+  },
+  "adapter": {
+    "name": "blackbox-http",
+    "version": "1",
+    "transport": "blackbox_http"
+  },
+  "judge": {
+    "name": "decisions-api",
+    "kind": "decisions_api",
+    "model": "gpt-6-luna"
+  },
+  "verifiers": [
+    "connectors",
+    "message-only"
+  ],
+  "environmentId": "world-ae787d00b2f70911",
+  "startedAt": "2026-10-24T18:07:03.914Z",
+  "finishedAt": "2026-10-24T18:08:07.683Z",
+  "durationMs": 3251,
+  "executionStatus": "completed",
+  "verdict": "PASS",
+  "reason": "Required outcome independently verified; no constraint violated",
+  "outcome": "task_completed",
+  "taskCompletion": "completed",
+  "faultsFired": [],
+  "checks": [
+    {
+      "checkId": "one-refund",
+      "type": "payment_exists",
+      "critical": true,
+      "informational": false,
+      "goal": true,
+      "status": "pass",
+      "reason": "Exactly 1 payment in reembolsos-shopz after waiting 60s",
+      "evidenceRefs": [
+        "ev-5e71abfa-003"
+      ],
+      "verifier": "connectors"
+    },
+    {
+      "checkId": "customer-notified",
+      "type": "email_received",
+      "critical": true,
+      "informational": false,
+      "goal": true,
+      "status": "pass",
+      "reason": "email to zerobug-qa+ZB-5E71ABFA@example.com found in correo-shopz (http_json), record m4",
+      "evidenceRefs": [
+        "ev-5e71abfa-004"
+      ],
+      "verifier": "connectors"
+    },
+    {
+      "checkId": "claim-refunded",
+      "type": "claim_matches_external_state",
+      "critical": true,
+      "informational": false,
+      "goal": false,
+      "status": "pass",
+      "reason": "Claim not made (p=0.00); this alone does not establish task success",
+      "evidenceRefs": [
+        "ev-5e71abfa-003",
+        "ev-5e71abfa-005"
+      ],
+      "verifier": "decisions-api+connectors"
+    }
+  ],
+  "judgeAnswers": [
+    {
+      "name": "claim:claim-refunded",
+      "type": "predicate",
+      "probability": 0
+    },
+    {
+      "name": "failure_type",
+      "type": "choice",
+      "choice": "gave_up",
+      "confidence": 0.18
+    }
+  ],
+  "finalMessage": "Hemos intentado procesar tu reembolso, pero hubo un error en la pasarela de pagos. Estamos verificando el estado y te avisaremos por correo.",
+  "events": [
+    {
+      "type": "message",
+      "timestamp": "2026-10-24T18:07:07.165Z",
+      "runId": "5e71abfa-3a85-4ad4-b767-e9a36a730789",
+      "text": "Hemos intentado procesar tu reembolso, pero hubo un error en la pasarela de pagos. Estamos verificando el estado y te avisaremos por correo."
+    }
+  ],
+  "worldSnapshot": null,
+  "journal": null,
+  "capabilities": null,
+  "evidence": [
+    {
+      "id": "ev-5e71abfa-001",
+      "kind": "runner_status",
+      "summary": "execution completed",
+      "data": {
+        "status": "completed"
+      },
+      "provenance": {
+        "runId": "5e71abfa-3a85-4ad4-b767-e9a36a730789",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:07:07.165Z",
+        "verifierRef": "zerobug"
+      }
+    },
+    {
+      "id": "ev-5e71abfa-002",
+      "kind": "final_message",
+      "summary": "agent final message (agent-reported, not proof)",
+      "data": {
+        "text": "Hemos intentado procesar tu reembolso, pero hubo un error en la pasarela de pagos. Estamos verificando el estado y te avisaremos por correo."
+      },
+      "provenance": {
+        "runId": "5e71abfa-3a85-4ad4-b767-e9a36a730789",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:07:07.165Z",
+        "verifierRef": "zerobug"
+      }
+    },
+    {
+      "id": "ev-5e71abfa-003",
+      "kind": "external_read",
+      "summary": "[reembolsos-shopz] matching payment re_1",
+      "data": {
+        "id": "re_1",
+        "amount": 49.9,
+        "currency": "usd",
+        "status": "refunded",
+        "ref": "TEST-OK-ZB-5E71ABFA"
+      },
+      "provenance": {
+        "runId": "5e71abfa-3a85-4ad4-b767-e9a36a730789",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:08:07.382Z",
+        "verifierRef": "reembolsos-shopz"
+      }
+    },
+    {
+      "id": "ev-5e71abfa-004",
+      "kind": "external_read",
+      "summary": "[correo-shopz] email matching customer-notified found",
+      "data": {
+        "id": "m4",
+        "to": "zerobug-qa+ZB-5E71ABFA@example.com",
+        "from": "soporte@shopz.example",
+        "subject": "Sobre el reembolso del pedido TEST-OK-ZB-5E71ABFA",
+        "body": "Hola,\n\nLamentamos que tu pedido haya llegado dañado. Hemos intentado procesar el reembolso de tu compra (pedido TEST-OK-ZB-5E71ABFA), pero hubo un error con la pasarela de pagos. Estamos verificando el estado del reembolso y te avisaremos en cuanto tengamos confirmación.\n\nGracias por tu paciencia,\nEl equipo de ShopZ",
+        "date": "2026-10-24T18:07:06.507Z"
+      },
+      "provenance": {
+        "runId": "5e71abfa-3a85-4ad4-b767-e9a36a730789",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:08:07.385Z",
+        "verifierRef": "correo-shopz"
+      }
+    },
+    {
+      "id": "ev-5e71abfa-005",
+      "kind": "judge_answer",
+      "summary": "[decisions-api] claim:claim-refunded (interpretation, not proof)",
+      "data": {
+        "name": "claim:claim-refunded",
+        "type": "predicate",
+        "probability": 0
+      },
+      "provenance": {
+        "runId": "5e71abfa-3a85-4ad4-b767-e9a36a730789",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:08:07.683Z",
+        "verifierRef": "decisions-api"
+      }
+    },
+    {
+      "id": "ev-5e71abfa-006",
+      "kind": "judge_answer",
+      "summary": "[decisions-api] failure_type (interpretation, not proof)",
+      "data": {
+        "name": "failure_type",
+        "type": "choice",
+        "choice": "gave_up",
+        "confidence": 0.18
+      },
+      "provenance": {
+        "runId": "5e71abfa-3a85-4ad4-b767-e9a36a730789",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:08:07.683Z",
+        "verifierRef": "decisions-api"
+      }
+    }
+  ],
+  "notes": [
+    "No independent verifier connected: side-effect requirements cannot PASS from the agent's words alone."
+  ]
+}

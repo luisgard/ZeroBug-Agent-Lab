@@ -21,7 +21,7 @@ Current status by gate (what is done, partial or blocked, and why): [`WAVE_STATU
 | MCP agent | An agent exposed as an MCP server (Streamable HTTP) | The reply of the tool that takes messages. Side effects through connectors |
 | OpenAI-compatible API | Any `/chat/completions` server (OpenRouter, Ollama, LiteLLM, vLLM…) | The reply. Side effects through connectors |
 | Platform templates | n8n Chat Trigger, Flowise, Dify, Langflow (black-box HTTP presets) | The reply. Templates follow each platform's documented API; **not yet run against the real platforms** |
-| OpenAI Agents API | Agents defined by instructions | Everything (instrumented). **BLOCKED in this build: no API key** |
+| OpenAI Agents API | Agents defined by instructions | Everything (instrumented). Run with a real key on Oct 24: [`docs/REAL-MODEL-RESULTS.md`](docs/REAL-MODEL-RESULTS.md) |
 
 **Real side effects:** with evidence connectors (Gmail API, order/payment APIs, any MCP connector) ZeroBug checks that the email really arrived or the order really exists, for any of the modes above. Setup and validation status: [`docs/CONNECTORS.md`](docs/CONNECTORS.md). Not yet run against a real inbox (needs a QA Gmail account).
 
@@ -53,7 +53,7 @@ npm run ui                                                   # http://127.0.0.1:
 
 Full instructions for Windows, macOS and Linux: [`docs/EXTERNAL-AGENT-DEMO.md`](docs/EXTERNAL-AGENT-DEMO.md).
 
-Real OpenAI APIs (optional): put `OPENAI_API_KEY` in `.env.local` (never committed), then `npm run proof`. See [`docs/API-PROOF.md`](docs/API-PROOF.md).
+Real OpenAI APIs (optional): put `OPENAI_API_KEY` in `.env.local` (never committed), then `npm run proof`. See [`docs/API-PROOF.md`](docs/API-PROOF.md). Real-model results and Windows setup notes: [`docs/REAL-MODEL-RESULTS.md`](docs/REAL-MODEL-RESULTS.md).
 
 ## Documentation
 
