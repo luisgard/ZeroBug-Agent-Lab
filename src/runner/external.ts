@@ -130,6 +130,8 @@ export class HttpBridgeRunner implements AgentRunner {
 // ---------------------------------------------------------------- black box
 
 const FIELD_PATH = /^[A-Za-z_][A-Za-z0-9_]{0,63}(\.[A-Za-z_][A-Za-z0-9_]{0,63}){0,4}$/;
+/** Reply paths may also index arrays, e.g. "choices.0.message.content". */
+const REPLY_PATH = /^[A-Za-z_][A-Za-z0-9_]{0,63}(\.([A-Za-z_][A-Za-z0-9_]{0,63}|\d{1,3})){0,7}$/;
 
 export type BlackBoxMapping = {
   /** Request body field that receives the task text, e.g. "message". */
@@ -143,28 +145,38 @@ export type BlackBoxMapping = {
 export class BlackBoxHttpRunner implements AgentRunner {
   readonly info: AdapterInfo = { name: "blackbox-http", version: "1", transport: "blackbox_http" };
 
-  constructor(private readonly opts: ExternalOptions & { mapping: BlackBoxMapping; timeoutSeconds?: number }) {
-    for (const p of [opts.mapping.taskField, opts.mapping.responseField, opts.mapping.correlationField].filter(Boolean)) {
+  constructor(
+    private readonly opts: ExternalOptions & {
+      mapping: BlackBoxMapping;
+      timeoutSeconds?: number;
+      /** Extra request headers (e.g. an API key). Values are secrets: redacted from every error. */
+      headers?: Record<string, string>;
+      /** Fixed fields merged into every request body (platform presets, e.g. Dify's response_mode). */
+      extraBody?: Record<string, unknown>;
+    },
+  ) {
+    for (const p of [opts.mapping.taskField, opts.mapping.correlationField].filter(Boolean)) {
       if (!FIELD_PATH.test(p!)) throw new Error(`Invalid mapping path: ${p}`);
     }
+    if (!REPLY_PATH.test(opts.mapping.responseField)) throw new Error(`Invalid mapping path: ${opts.mapping.responseField}`);
   }
 
   async run(input: RunInput, emit: Emit): Promise<RunResult> {
     const release = await outbound.acquire();
     const fail = (status: RunResult["status"], reason: string): RunResult => {
-      const safe = redactText(reason, [this.opts.agentToken ?? ""]);
+      const safe = redactText(reason, [this.opts.agentToken ?? "", ...Object.values(this.opts.headers ?? {})]);
       emit({ type: "error", timestamp: nowIso(), runId: input.runId, category: status, reason: safe });
       return { status, finalMessage: null, reason: safe, adapter: this.info };
     };
     try {
-      const body: Record<string, unknown> = {};
+      const body: Record<string, unknown> = structuredClone(this.opts.extraBody ?? {});
       setPath(body, this.opts.mapping.taskField, input.task);
       if (this.opts.mapping.correlationField) setPath(body, this.opts.mapping.correlationField, input.runId);
       // No automatic retry: a black-box agent may have acted before the failure and ZeroBug cannot see it.
       const res = await safeFetch(this.opts.endpoint, {
         method: "POST",
         body: JSON.stringify(body),
-        headers: this.opts.agentToken ? { authorization: `Bearer ${this.opts.agentToken}` } : {},
+        headers: { ...(this.opts.agentToken ? { authorization: `Bearer ${this.opts.agentToken}` } : {}), ...this.opts.headers },
         timeoutMs: (this.opts.timeoutSeconds ?? input.limits.maxSeconds) * 1000,
         maxRedirects: 2,
         maxResponseBytes: this.opts.maxResponseBytes ?? 256 * 1024,

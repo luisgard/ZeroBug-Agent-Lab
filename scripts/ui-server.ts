@@ -26,6 +26,8 @@ import { fingerprint, newRunId } from "../src/util/ids.ts";
 import { loadLocalEnv } from "../src/util/env.ts";
 import { SourceRegistry } from "../src/connectors/registry.ts";
 import { BrowserChatRunner } from "../src/runner/browser.ts";
+import { ChatCompletionsRunner } from "../src/runner/chat-completions.ts";
+import { McpAgentRunner } from "../src/runner/mcp-agent.ts";
 import { ConnectionError, ConnectionService } from "../src/connections/service.ts";
 import { SecretBox } from "../src/connections/secret-box.ts";
 import { buildPlan, planAccess, toScenario } from "../src/planning/plan.ts";
@@ -70,12 +72,17 @@ const runSources = () => (evidenceSources ?? SourceRegistry.empty()).withExtra(c
 const judge = process.env.ZB_JUDGE === "decisions" && hasKey ? new DecisionsJudge(new OpenAI()) : new HeuristicJudge();
 
 const Mapping = z.strictObject({ taskField: z.string(), responseField: z.string(), correlationField: z.string().optional() });
+// Agent credentials typed in the UI: kept in server memory for the runs only, never written to run files.
+const Headers = z.record(z.string().regex(/^[A-Za-z0-9-]{1,64}$/, "Invalid header name"), z.string().max(4000)).refine((h) => Object.keys(h).length <= 5, "At most 5 headers");
+const ExtraBody = z.record(z.string().max(64), z.unknown()).refine((b) => JSON.stringify(b).length <= 4000, "Extra body is too large");
 const AgentSpec = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("sample"), id: z.enum(Object.keys(SAMPLE_AGENTS) as [SampleAgentId, ...SampleAgentId[]]) }),
   z.strictObject({ kind: z.literal("agents_api"), instructions: z.string().trim().min(1, "Instructions are empty"), model: z.string().optional(), label: z.string().max(80).optional() }),
   z.strictObject({ kind: z.literal("http_bridge"), endpoint: z.string().url(), label: z.string().max(80).optional(), version: z.string().max(80).optional() }),
   z.strictObject({ kind: z.literal("browser_chat"), url: z.string().url(), inputSelector: z.string().min(1).max(200).optional(), sendSelector: z.string().max(200).optional(), replySelector: z.string().min(1).max(200).optional(), label: z.string().max(80).optional(), version: z.string().max(80).optional() }),
-  z.strictObject({ kind: z.literal("blackbox_http"), endpoint: z.string().url(), mapping: Mapping, verifierUrl: z.string().url().optional(), label: z.string().max(80).optional(), version: z.string().max(80).optional() }),
+  z.strictObject({ kind: z.literal("blackbox_http"), endpoint: z.string().url(), mapping: Mapping, headers: Headers.optional(), extraBody: ExtraBody.optional(), verifierUrl: z.string().url().optional(), label: z.string().max(80).optional(), version: z.string().max(80).optional() }),
+  z.strictObject({ kind: z.literal("mcp_agent"), url: z.string().url(), headers: Headers.optional(), tool: z.string().max(128).optional(), argument: z.string().max(128).optional(), label: z.string().max(80).optional(), version: z.string().max(80).optional() }),
+  z.strictObject({ kind: z.literal("chat_completions"), baseUrl: z.string().url(), model: z.string().trim().min(1, "Model is empty").max(200), apiKey: z.string().max(4000).optional(), label: z.string().max(80).optional(), version: z.string().max(80).optional() }),
 ]);
 const PlanRun = z.strictObject({
   planId: z.string().min(8).max(40),
@@ -90,7 +97,7 @@ const StartRuns = z.strictObject({ agent: AgentSpec, scenarioIds: z.array(z.stri
 const Connect = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("http_bridge"), endpoint: z.string().url() }),
   z.strictObject({ kind: z.literal("browser_chat"), url: z.string().url(), inputSelector: z.string().max(200).optional(), sendSelector: z.string().max(200).optional(), replySelector: z.string().max(200).optional() }),
-  z.strictObject({ kind: z.literal("blackbox_http"), endpoint: z.string().url(), mapping: Mapping, verifierUrl: z.string().url().optional() }),
+  z.strictObject({ kind: z.literal("blackbox_http"), endpoint: z.string().url(), mapping: Mapping, headers: Headers.optional(), extraBody: ExtraBody.optional(), verifierUrl: z.string().url().optional() }),
 ]);
 
 function build(spec: z.infer<typeof AgentSpec>): { runner: AgentRunner; agent: AgentDescriptor; externalOutbox?: any } {
@@ -122,12 +129,36 @@ function build(spec: z.infer<typeof AgentSpec>): { runner: AgentRunner; agent: A
       const readToken = process.env.ZB_VERIFIER_READ_TOKEN;
       if (spec.verifierUrl && !readToken) throw new HttpError(400, "Verifier URL given but ZB_VERIFIER_READ_TOKEN is not configured on the server.");
       return {
-        runner: new BlackBoxHttpRunner({ endpoint: spec.endpoint, mapping: spec.mapping, policy }),
+        runner: new BlackBoxHttpRunner({ endpoint: spec.endpoint, mapping: spec.mapping, policy, ...(spec.headers ? { headers: spec.headers } : {}), ...(spec.extraBody ? { extraBody: spec.extraBody } : {}) }),
         agent: { id: "blackbox", label: spec.label ?? `Black-box ${spec.endpoint}`, version: spec.version ?? "unversioned", endpoint: spec.endpoint },
         ...(spec.verifierUrl ? { externalOutbox: { url: spec.verifierUrl, readToken, fetch: { policy } } } : {}),
       };
     }
+    case "mcp_agent":
+      return {
+        runner: new McpAgentRunner({ url: spec.url, policy, ...(spec.headers ? { headers: spec.headers } : {}), ...(spec.tool ? { tool: spec.tool } : {}), ...(spec.argument ? { argument: spec.argument } : {}) }),
+        agent: { id: "mcp-agent", label: spec.label ?? `MCP ${spec.url}`, version: spec.version ?? "unversioned", endpoint: spec.url },
+      };
+    case "chat_completions":
+      return {
+        runner: new ChatCompletionsRunner({ baseUrl: spec.baseUrl, model: spec.model, policy, ...(spec.apiKey ? { apiKey: spec.apiKey } : {}) }),
+        agent: { id: "chat-completions", label: spec.label ?? `${spec.model} @ ${spec.baseUrl}`, version: spec.version ?? spec.model, endpoint: spec.baseUrl },
+      };
   }
+}
+
+const SMOKE_TASK = "Hola, esto es una prueba de conexión de ZeroBug. Responde con un saludo corto y no hagas ninguna acción. / Hi, this is a ZeroBug connection test. Reply with a short greeting and take no action.";
+/** Connection check for the simple UI: one harmless message through the same runner the tests use. */
+async function smokeAgent(spec: z.infer<typeof AgentSpec>) {
+  const { runner } = build(spec);
+  const runId = newRunId();
+  const extra = runner instanceof McpAgentRunner ? await runner.describe().catch((err) => ({ error: (err as Error).message })) : undefined;
+  const r = await runner.run({ runId, task: SMOKE_TASK, tools: [], callTool: async () => ({ success: false, error: "no tools" }), limits: { maxToolCalls: 1, maxSeconds: 60 } }, () => {});
+  return {
+    mode: spec.kind,
+    smoke: { ok: r.status === "completed" && !!r.finalMessage, runId, finalMessage: r.finalMessage, status: r.status, toolCallsObserved: 0, ...(r.reason ? { reason: r.reason } : {}) },
+    ...(extra ? { mcp: extra } : {}),
+  };
 }
 
 class HttpError extends Error {
@@ -156,6 +187,7 @@ async function api(method: string, path: string, body: unknown): Promise<unknown
   const connMatch = /^\/api\/connections\/([A-Za-z0-9_-]{6,40})(\/test)?$/.exec(path);
   if (connMatch && method === "POST" && connMatch[2]) return connections.test(connMatch[1]!);
   if (connMatch && method === "DELETE" && !connMatch[2]) return connections.remove(connMatch[1]!);
+  if (method === "POST" && path === "/api/agent/check") return smokeAgent(parse(AgentSpec, body));
   if (method === "POST" && path === "/api/connect") {
     const c = parse(Connect, body);
     const policy = policyFromEnv();
@@ -170,7 +202,7 @@ async function api(method: string, path: string, body: unknown): Promise<unknown
       return { mode: "browser_chat", endpoint: c.url, smoke: { ok: r.status === "completed" && !!r.finalMessage, runId, finalMessage: r.finalMessage, status: r.status, toolCallsObserved: 0, ...(r.reason ? { reason: r.reason } : {}) } };
     }
     const readToken = process.env.ZB_VERIFIER_READ_TOKEN;
-    return connectBlackBox({ endpoint: c.endpoint, mapping: c.mapping, policy, ...(c.verifierUrl && readToken ? { externalOutbox: { url: c.verifierUrl, readToken, fetch: { policy } } } : {}) });
+    return connectBlackBox({ endpoint: c.endpoint, mapping: c.mapping, policy, ...(c.headers ? { headers: c.headers } : {}), ...(c.extraBody ? { extraBody: c.extraBody } : {}), ...(c.verifierUrl && readToken ? { externalOutbox: { url: c.verifierUrl, readToken, fetch: { policy } } } : {}) });
   }
   if (method === "POST" && path === "/api/plan") {
     const req = parse(PlanRequestSchema, body);

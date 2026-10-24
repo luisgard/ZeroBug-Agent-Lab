@@ -112,7 +112,7 @@ export async function validateUrl(raw: string, policy: NetPolicy, resolve: Resol
 }
 
 export type SafeFetchOptions = {
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "DELETE";
   headers?: Record<string, string>;
   body?: string;
   timeoutMs?: number;
@@ -156,6 +156,32 @@ export async function safeFetch(raw: string, opts: SafeFetchOptions = {}): Promi
     }
     return { ...res, finalUrl: target.url.toString(), hops };
   }
+}
+
+const PASS_HEADERS = ["content-type", "mcp-session-id", "mcp-protocol-version", "www-authenticate"];
+
+/**
+ * A fetch() for third-party clients (MCP SDK, connectors) that goes through safeFetch: validated,
+ * pinned, no redirects, bounded. Bodies are buffered, so long-lived event streams are refused:
+ * a GET asking for text/event-stream gets 405, which MCP clients treat as "no server stream".
+ */
+export function guardedFetch(policy: () => NetPolicy, o: { timeoutMs?: number; maxResponseBytes?: number } = {}): typeof fetch {
+  return (async (input: any, init?: RequestInit) => {
+    const url = String(input instanceof Request ? input.url : input);
+    const headers: Record<string, string> = {};
+    new Headers(init?.headers).forEach((v, k) => (headers[k] = v));
+    const method = (init?.method ?? "GET").toUpperCase() as "GET" | "POST" | "DELETE";
+    if (method === "GET" && (headers.accept ?? "").includes("text/event-stream")) return new Response(null, { status: 405 });
+    const body = typeof init?.body === "string" ? init.body : undefined;
+    const res = await safeFetch(url, { method, headers, ...(body !== undefined ? { body } : {}), maxRedirects: 0, timeoutMs: o.timeoutMs ?? 15_000, maxResponseBytes: o.maxResponseBytes ?? 2 * 1024 * 1024, policy: policy(), ...(init?.signal ? { signal: init.signal } : {}) });
+    const out = new Headers();
+    for (const h of PASS_HEADERS) {
+      const v = res.headers[h];
+      if (typeof v === "string") out.set(h, v);
+    }
+    const noBody = res.status === 204 || res.status === 205 || res.status === 304;
+    return new Response(noBody ? null : res.text, { status: res.status < 200 ? 502 : res.status, headers: out });
+  }) as typeof fetch;
 }
 
 export async function safeFetchJson(raw: string, opts: SafeFetchOptions = {}): Promise<unknown> {

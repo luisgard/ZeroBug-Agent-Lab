@@ -47,6 +47,9 @@
   h1 { font-size: 28px; line-height: 1.2; margin: 0 0 6px; letter-spacing: -.02em; }
   h2 { font-size: 18px; margin: 0 0 8px; }
   .lead { color: var(--muted); margin: 0 0 20px; }
+  .typebox { display: flex; gap: 14px; align-items: flex-start; background: var(--brand-soft); border-radius: var(--radius); padding: 14px 16px; margin: 12px 0 8px; }
+  .typebox p { margin: 0; color: var(--ink); font-size: 15px; }
+  .typebox .ic { width: 36px; height: 36px; border-radius: 10px; background: var(--card); display: grid; place-items: center; flex: none; color: var(--brand); }
   .choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 20px; }
   @media (max-width: 640px) { .choices { grid-template-columns: 1fr; } }
   .choice { text-align: left; background: var(--card); border: 2px solid var(--line); border-radius: var(--radius); padding: 18px; cursor: pointer; font: inherit; color: var(--ink); display: flex; gap: 14px; align-items: flex-start; }
@@ -148,6 +151,9 @@ const ICON = {
   code: '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>',
   mail: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>',
   plug: '<path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0zM12 18v4"/>',
+  flow: '<rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="15" width="6" height="6" rx="1"/><path d="M9 6h4a2 2 0 0 1 2 2v7"/>',
+  spark: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/>',
 };
 async function call(method, path, body) {
   const res = await fetch(path, { method, headers: { "content-type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
@@ -166,6 +172,8 @@ const T = {
     tagline: "Los agentes dicen. ZeroBug comprueba.", nav_new: "Nueva prueba", nav_conn: "Conexiones", nav_hist: "Historial", nav_adv: "Avanzado",
     s1: "Tu agente", s2: "Qué hace", s3: "Pruebas", s4: "Resultados",
     a_title: "¿Dónde vive tu agente?", a_lead: "No necesitamos su código. Solo cómo hablarle.",
+    a_type: "Elige dónde vive", a_secret_h: "No se guarda: si recargas la página, escríbela otra vez.", a_mcp_pick: "Este servidor tiene varias herramientas. ¿Cuál recibe el mensaje?", a_mcp_auto: "Que ZeroBug elija",
+    a_needs_key: "Esta opción necesita OPENAI_API_KEY en el archivo .env.local (ver docs/LOCAL-SETUP.md).", err_field: "Falta: {x}", a_preset_h: "Plantilla con los campos que usa esta plataforma. Si tu versión responde distinto, elige “Una API propia” y ajusta los campos.",
     a_web: "Una página con chat", a_web_d: "Escribes en una caja de texto y responde.", a_api: "Una API", a_api_d: "Recibe un mensaje por HTTP y responde texto.",
     a_url_web: "Dirección de la página del chat", a_url_api: "Dirección de la API",
     a_name: "Nombre de esta versión (opcional)", a_name_h: "Para comparar después, por ejemplo “v1” y “v2”.",
@@ -213,6 +221,8 @@ const T = {
     tagline: "Agents report. ZeroBug proves.", nav_new: "New test", nav_conn: "Connections", nav_hist: "History", nav_adv: "Advanced",
     s1: "Your agent", s2: "What it does", s3: "Tests", s4: "Results",
     a_title: "Where does your agent live?", a_lead: "We don't need its code. Just how to talk to it.",
+    a_type: "Choose where it lives", a_secret_h: "Not saved: if you reload the page, type it again.", a_mcp_pick: "This server has several tools. Which one receives the message?", a_mcp_auto: "Let ZeroBug choose",
+    a_needs_key: "This option needs OPENAI_API_KEY in the .env.local file (see docs/LOCAL-SETUP.md).", err_field: "Missing: {x}", a_preset_h: "Template with the fields this platform uses. If your version answers differently, choose “Your own API” and adjust the fields.",
     a_web: "A chat page", a_web_d: "You type in a text box and it answers.", a_api: "An API", a_api_d: "It receives a message over HTTP and replies with text.",
     a_url_web: "Chat page address", a_url_api: "API address",
     a_name: "Name of this version (optional)", a_name_h: "To compare later, e.g. “v1” and “v2”.",
@@ -263,10 +273,12 @@ const t = (k, vars = {}) => Object.entries(vars).reduce((s, [a, b]) => s.replace
 // ---------------------------------------------------------------- state
 const S = {
   step: 1,
-  mode: store.get("mode", "web"),
-  url: store.get("url", ""),
+  type: store.get("type", store.get("mode", "web")),
+  f: store.get("f", store.get("url", "") ? { [store.get("mode", "web")]: { url: store.get("url", "") } } : {}),
+  sec: {}, // keys and tokens: memory only, never saved in the browser
+  mcpInfo: null,
+  meta: null,
   version: store.get("version", ""),
-  adv: store.get("adv", { taskField: "message", responseField: "reply", correlationField: "conversation_id", inputSelector: "", sendSelector: "", replySelector: "" }),
   smoke: null,
   desc: store.get("desc", ""),
   spec: store.get("spec", ""),
@@ -275,13 +287,68 @@ const S = {
   runIds: [],
   view: "wizard",
 };
+// ---------------------------------------------------------------- agent types (step 1)
+const L = (o) => (o && (o[lang] || o.en)) || "";
+const bearer = (header, token) => !token ? {} : { [header || "Authorization"]: /^authorization$/i.test(header || "Authorization") && !/\s/.test(token) ? `Bearer ${token}` : token };
+const F = {
+  url: (ph, label) => ({ k: "url", label: label || { es: "Dirección", en: "Address" }, ph, url: true }),
+  token: (label, help) => ({ k: "token", secret: true, opt: true, label: label || { es: "Clave o token de acceso (opcional)", en: "Access key or token (optional)" }, ...(help ? { help } : {}) }),
+  authHeader: { k: "authHeader", adv: true, opt: true, ph: "Authorization", label: { es: "Encabezado donde va la clave", en: "Header that carries the key" }, help: { es: "Si es Authorization, ZeroBug agrega “Bearer” por ti.", en: "If it is Authorization, ZeroBug adds “Bearer” for you." } },
+};
+const AGENT_TYPES = [
+  { id: "web", group: "common", icon: "chat", name: { es: "Una página web con chat", en: "A web page with a chat" }, desc: { es: "Escribes en una caja de texto y responde. ZeroBug abre un navegador invisible y le escribe como una persona.", en: "You type in a box and it answers. ZeroBug opens an invisible browser and types like a person." },
+    fields: [F.url("https://mi-agente.com/chat", { es: "Dirección de la página", en: "Page address" }),
+      { k: "inputSelector", adv: true, opt: true, label: { es: "Caja de texto (selector CSS)", en: "Text box (CSS selector)" }, help: { es: "Déjalo vacío y ZeroBug la encuentra solo.", en: "Leave empty and ZeroBug finds it." } },
+      { k: "sendSelector", adv: true, opt: true, label: { es: "Botón de enviar (selector CSS)", en: "Send button (CSS selector)" } },
+      { k: "replySelector", adv: true, opt: true, label: { es: "Burbuja de respuesta (selector CSS)", en: "Reply bubble (CSS selector)" } }],
+    spec: (v) => ({ kind: "browser_chat", url: v.url, ...(v.inputSelector ? { inputSelector: v.inputSelector } : {}), ...(v.sendSelector ? { sendSelector: v.sendSelector } : {}), ...(v.replySelector ? { replySelector: v.replySelector } : {}) }), plan: "WEB_UI" },
+  { id: "api", group: "common", icon: "code", name: { es: "Una API propia (HTTP / JSON)", en: "Your own API (HTTP / JSON)" }, desc: { es: "Recibe un mensaje por HTTP y responde con texto en JSON.", en: "Receives a message over HTTP and replies with text in JSON." },
+    fields: [F.url("https://api.mi-agente.com/chat", { es: "Dirección de la API", en: "API address" }), F.token(), F.authHeader,
+      { k: "taskField", adv: true, opt: true, ph: "message", label: { es: "Campo donde va el mensaje", en: "Field that carries the message" } },
+      { k: "responseField", adv: true, opt: true, ph: "reply", label: { es: "Campo donde viene la respuesta", en: "Field that carries the reply" }, help: { es: "Usa puntos para campos anidados, ej. data.text o choices.0.text", en: "Use dots for nested fields, e.g. data.text or choices.0.text" } },
+      { k: "correlationField", adv: true, opt: true, ph: "conversation_id", label: { es: "Campo de conversación", en: "Conversation field" } }],
+    spec: (v, s) => ({ kind: "blackbox_http", endpoint: v.url, mapping: { taskField: v.taskField || "message", responseField: v.responseField || "reply", correlationField: v.correlationField || "conversation_id" }, headers: bearer(v.authHeader, s.token) }), plan: "HTTP_API" },
+  { id: "n8n", group: "platform", icon: "flow", name: { es: "n8n (Chat Trigger)", en: "n8n (Chat Trigger)" }, desc: { es: "Un flujo de n8n con el nodo Chat Trigger. En el nodo activa “Make Chat Publicly Available” y copia la Chat URL.", en: "An n8n workflow with the Chat Trigger node. Turn on “Make Chat Publicly Available” and copy the Chat URL." },
+    fields: [F.url("https://tu-n8n.com/webhook/xxxxxxxx/chat", { es: "Chat URL del nodo", en: "Node Chat URL" }),
+      { k: "user", opt: true, label: { es: "Usuario (si el chat usa Basic Auth)", en: "User (if the chat uses Basic Auth)" } }, { k: "token", secret: true, opt: true, label: { es: "Contraseña (si el chat usa Basic Auth)", en: "Password (if the chat uses Basic Auth)" } }],
+    spec: (v, s) => ({ kind: "blackbox_http", endpoint: v.url, mapping: { taskField: "chatInput", responseField: "output", correlationField: "sessionId" }, extraBody: { action: "sendMessage" }, headers: v.user || s.token ? { Authorization: "Basic " + btoa(unescape(encodeURIComponent(`${v.user || ""}:${s.token || ""}`))) } : {} }), plan: "HTTP_API" },
+  { id: "flowise", group: "platform", icon: "flow", name: { es: "Flowise", en: "Flowise" }, desc: { es: "Un chatflow o agentflow de Flowise. La dirección está en “API Endpoint” del flujo.", en: "A Flowise chatflow or agentflow. The address is under the flow's “API Endpoint”." },
+    fields: [F.url("https://tu-flowise.com/api/v1/prediction/<id-del-flujo>", { es: "API Endpoint (prediction)", en: "API Endpoint (prediction)" }), F.token({ es: "API key de Flowise (si el flujo la pide)", en: "Flowise API key (if the flow requires it)" })],
+    spec: (v, s) => ({ kind: "blackbox_http", endpoint: v.url, mapping: { taskField: "question", responseField: "text", correlationField: "overrideConfig.sessionId" }, headers: bearer("Authorization", s.token) }), plan: "HTTP_API" },
+  { id: "dify", group: "platform", icon: "flow", name: { es: "Dify", en: "Dify" }, desc: { es: "Una app de chat o agente en Dify. Necesitas la API key de la app (Acceso por API).", en: "A Dify chat or agent app. You need the app's API key (API Access)." },
+    fields: [F.url("https://api.dify.ai/v1", { es: "Dirección base de la API", en: "API base address" }), { k: "token", secret: true, label: { es: "API key de la app (app-…)", en: "App API key (app-…)" } }],
+    spec: (v, s) => ({ kind: "blackbox_http", endpoint: /chat-messages\/?$/.test(v.url) ? v.url : v.url.replace(/\/+$/, "") + "/chat-messages", mapping: { taskField: "query", responseField: "answer", correlationField: "user" }, extraBody: { inputs: {}, response_mode: "blocking" }, headers: bearer("Authorization", s.token) }), plan: "HTTP_API" },
+  { id: "langflow", group: "platform", icon: "flow", name: { es: "Langflow", en: "Langflow" }, desc: { es: "Un flujo de Langflow. La dirección está en “API access” del flujo.", en: "A Langflow flow. The address is under the flow's “API access”." },
+    fields: [F.url("https://tu-langflow.com/api/v1/run/<id-del-flujo>", { es: "Dirección del flujo (run)", en: "Flow address (run)" }), F.token({ es: "API key de Langflow (si la pide)", en: "Langflow API key (if required)" })],
+    spec: (v, s) => ({ kind: "blackbox_http", endpoint: v.url, mapping: { taskField: "input_value", responseField: "outputs.0.outputs.0.results.message.text", correlationField: "session_id" }, extraBody: { input_type: "chat", output_type: "chat" }, headers: s.token ? { "x-api-key": s.token } : {} }), plan: "HTTP_API" },
+  { id: "openai_compat", group: "platform", icon: "code", name: { es: "API compatible con OpenAI", en: "OpenAI-compatible API" }, desc: { es: "Cualquier servidor que hable el formato /chat/completions: OpenRouter, Ollama, LiteLLM, vLLM, Open WebUI y muchos agentes.", en: "Any server speaking the /chat/completions format: OpenRouter, Ollama, LiteLLM, vLLM, Open WebUI and many agents." },
+    fields: [F.url("https://openrouter.ai/api/v1", { es: "Dirección base (termina en /v1)", en: "Base address (ends in /v1)" }), { k: "model", ph: "mi-agente", label: { es: "Modelo o nombre del agente", en: "Model or agent name" } }, F.token({ es: "API key (si la pide)", en: "API key (if required)" })],
+    spec: (v, s) => ({ kind: "chat_completions", baseUrl: v.url, model: v.model, ...(s.token ? { apiKey: s.token } : {}) }), plan: "HTTP_API" },
+  { id: "agents_api", group: "platform", icon: "spark", needsKey: true, name: { es: "Agente de OpenAI (Agents API)", en: "OpenAI agent (Agents API)" }, desc: { es: "Un agente definido con instrucciones en la Agents API de OpenAI. ZeroBug lo corre por ti y ve cada herramienta que usa.", en: "An agent defined with instructions in OpenAI's Agents API. ZeroBug runs it for you and sees every tool it uses." },
+    fields: [{ k: "instructions", area: true, label: { es: "Instrucciones del agente", en: "Agent instructions" }, ph: "Eres un asistente que envía correos…" }, { k: "model", opt: true, adv: true, label: { es: "Modelo", en: "Model" } }],
+    spec: (v) => ({ kind: "agents_api", instructions: v.instructions, ...(v.model ? { model: v.model } : {}) }), plan: "HTTP_API" },
+  { id: "mcp", group: "protocol", icon: "plug", name: { es: "Servidor MCP", en: "MCP server" }, desc: { es: "Tu agente se expone como servidor MCP (Streamable HTTP). ZeroBug elige la herramienta que recibe mensajes y le manda la tarea.", en: "Your agent is exposed as an MCP server (Streamable HTTP). ZeroBug picks the tool that takes messages and sends it the task." },
+    fields: [F.url("https://tu-servidor.com/mcp", { es: "Dirección del servidor MCP", en: "MCP server address" }), F.token(), F.authHeader,
+      { k: "tool", adv: true, opt: true, label: { es: "Herramienta que recibe el mensaje", en: "Tool that receives the message" }, help: { es: "Déjalo vacío y ZeroBug la elige; si hay varias, te las muestra.", en: "Leave empty and ZeroBug picks it; if there are several, it shows them." } },
+      { k: "argument", adv: true, opt: true, label: { es: "Argumento donde va el mensaje", en: "Argument that carries the message" } }],
+    spec: (v, s) => ({ kind: "mcp_agent", url: v.url, headers: bearer(v.authHeader, s.token), ...(v.tool ? { tool: v.tool } : {}), ...(v.argument ? { argument: v.argument } : {}) }), plan: "HTTP_API" },
+  { id: "bridge", group: "protocol", icon: "link", name: { es: "Puente ZeroBug (integración completa)", en: "ZeroBug bridge (full integration)" }, desc: { es: "Tu equipo conecta las herramientas del agente a ZeroBug (docs/HTTP-BRIDGE-CONTRACT.md). Así vemos cada acción y podemos simular fallas.", en: "Your team routes the agent's tools through ZeroBug (docs/HTTP-BRIDGE-CONTRACT.md). We see every action and can inject failures." },
+    fields: [F.url("https://mi-agente.com/zerobug/run", { es: "Dirección del puente (/run)", en: "Bridge address (/run)" })],
+    spec: (v) => ({ kind: "http_bridge", endpoint: v.url }), plan: "BRIDGE", check: "bridge" },
+  ...[["slack", "Slack"], ["teams", "Microsoft Teams"], ["whatsapp", "WhatsApp"], ["telegram", "Telegram"], ["voice", { es: "Llamada de voz", en: "Voice call" }], ["a2a", { es: "Protocolo A2A (agente a agente)", en: "A2A protocol (agent to agent)" }]]
+    .map(([id, name]) => ({ id, group: "soon", soon: true, name: typeof name === "string" ? { es: name, en: name } : name })),
+];
+const GROUPS = { common: { es: "Lo más común", en: "Most common" }, platform: { es: "Plataformas de agentes", en: "Agent platforms" }, protocol: { es: "Protocolos", en: "Protocols" }, soon: { es: "Próximamente", en: "Coming soon" } };
+const agentType = () => AGENT_TYPES.find((x) => x.id === S.type && !x.soon) || AGENT_TYPES[0];
 function agentSpec() {
-  const label = `${S.url}${S.version ? " · " + S.version : ""}`;
-  const version = S.version || "unversioned";
-  if (S.mode === "web") return { kind: "browser_chat", url: S.url, ...(S.adv.inputSelector ? { inputSelector: S.adv.inputSelector } : {}), ...(S.adv.sendSelector ? { sendSelector: S.adv.sendSelector } : {}), ...(S.adv.replySelector ? { replySelector: S.adv.replySelector } : {}), label, version };
-  return { kind: "blackbox_http", endpoint: S.url, mapping: { taskField: S.adv.taskField || "message", responseField: S.adv.responseField || "reply", ...(S.adv.correlationField ? { correlationField: S.adv.correlationField } : {}) }, label, version };
+  const at = agentType();
+  const v = S.f[at.id] || {};
+  const label = `${L(at.name)}${v.url ? " · " + v.url : ""}${S.version ? " · " + S.version : ""}`.slice(0, 80);
+  const spec = at.spec(v, S.sec[at.id] || {});
+  if (spec.headers && !Object.keys(spec.headers).length) delete spec.headers;
+  return at.id === "agents_api" ? { ...spec, label } : { ...spec, label, version: S.version || "unversioned" };
 }
-function save() { store.set("mode", S.mode); store.set("url", S.url); store.set("version", S.version); store.set("adv", S.adv); store.set("desc", S.desc); store.set("spec", S.spec); }
+function save() { store.set("type", S.type); store.set("f", S.f); store.set("version", S.version); store.set("desc", S.desc); store.set("spec", S.spec); }
 
 // ---------------------------------------------------------------- chrome
 function paintChrome() {
@@ -314,35 +381,57 @@ function render() {
 
 // ---------------------------------------------------------------- step 1: your agent
 function stepAgent(m) {
+  const at = agentType();
   const card = h("section", { class: "card" });
-  const choice = (mode, icon, title, desc) => h("button", { type: "button", class: "choice", "aria-pressed": String(S.mode === mode), onclick: () => { S.mode = mode; S.smoke = null; save(); render(); } },
-    h("span", { class: "ic" }, svg(ICON[icon])), h("div", {}, h("b", {}, t(title)), h("span", {}, t(desc))));
-  const url = h("input", { id: "a-url", type: "url", value: S.url, placeholder: S.mode === "web" ? "https://mi-agente.com/chat" : "https://api.mi-agente.com/chat", autocomplete: "off" });
-  url.oninput = () => { S.url = url.value.trim(); S.smoke = null; save(); };
+  const v = (S.f[at.id] ||= {}), sec = (S.sec[at.id] ||= {});
+  const reset = () => { S.smoke = null; S.mcpInfo = null; };
+  const sel = h("select", { id: "a-type" }, ...["common", "platform", "protocol", "soon"].map((g) =>
+    h("optgroup", { label: L(GROUPS[g]) }, ...AGENT_TYPES.filter((x) => x.group === g).map((x) => h("option", { value: x.id, selected: x.id === at.id, disabled: !!x.soon }, L(x.name))))));
+  sel.onchange = () => { S.type = sel.value; reset(); save(); render(); };
+  const field = (f) => {
+    const id = "f-" + f.k;
+    const val = f.secret ? sec[f.k] || "" : v[f.k] || "";
+    const input = f.area ? h("textarea", { id, rows: 5, placeholder: f.ph || "" }, val) : h("input", { id, type: f.secret ? "password" : f.url ? "url" : "text", value: val, placeholder: f.ph || "", autocomplete: "off", spellcheck: "false" });
+    input.oninput = () => { const x = input.value.trim(); if (f.secret) sec[f.k] = x; else v[f.k] = x; reset(); save(); };
+    const help = f.secret ? `${L(f.help)} ${t("a_secret_h")}`.trim() : L(f.help);
+    return [h("label", { for: id }, L(f.label)), input, help ? h("div", { class: "hint" }, help) : ""];
+  };
+  const main = at.fields.filter((f) => !f.adv), adv = at.fields.filter((f) => f.adv);
   const ver = h("input", { id: "a-ver", value: S.version, placeholder: "v1" }); ver.oninput = () => { S.version = ver.value.trim(); save(); };
-  const advField = (key, labelKey) => { const i = h("input", { id: "adv-" + key, value: S.adv[key] || "" }); i.oninput = () => { S.adv[key] = i.value.trim(); save(); }; return [h("label", { for: "adv-" + key }, t(labelKey)), i]; };
-  const adv = S.mode === "web"
-    ? h("details", {}, h("summary", {}, t("a_adv")), h("p", { class: "hint" }, t("a_sel_h")), ...advField("inputSelector", "a_sel_in"), ...advField("sendSelector", "a_sel_send"), ...advField("replySelector", "a_sel_out"))
-    : h("details", {}, h("summary", {}, t("a_adv")), ...advField("taskField", "a_in"), ...advField("responseField", "a_out"), ...advField("correlationField", "a_corr"));
   const result = h("div", { "aria-live": "polite" });
   if (S.smoke) result.append(smokeBox(S.smoke));
-  const tryBtn = h("button", { type: "button", class: "btn primary", onclick: async () => {
-    if (!/^https?:\/\//.test(S.url)) { result.replaceChildren(h("div", { class: "notice bad" }, t("err_url"))); return; }
+  if (at.id === "mcp" && S.mcpInfo?.tools?.length > 1) {
+    const ts = h("select", { id: "mcp-tool" }, h("option", { value: "" }, t("a_mcp_auto") + (S.mcpInfo.choice?.tool ? ` (${S.mcpInfo.choice.tool})` : "")), ...S.mcpInfo.tools.map((x) => h("option", { value: x.name, selected: x.name === v.tool }, x.name + (x.description ? " — " + x.description.slice(0, 60) : ""))));
+    ts.onchange = () => { v.tool = ts.value; S.smoke = null; save(); render(); };
+    result.append(h("label", { for: "mcp-tool" }, t("a_mcp_pick")), ts);
+  }
+  const keyMissing = at.needsKey && S.meta && !String(S.meta.agentsApi).startsWith("available");
+  const tryBtn = h("button", { type: "button", class: "btn primary", disabled: keyMissing, onclick: async () => {
+    for (const f of at.fields) {
+      const x = f.secret ? sec[f.k] : v[f.k];
+      if (f.url && !/^https?:\/\/\S+$/.test(x || "")) { result.replaceChildren(h("div", { class: "notice bad" }, t("err_url"))); return; }
+      if (!f.opt && !f.url && !x) { result.replaceChildren(h("div", { class: "notice bad" }, t("err_field", { x: L(f.label) }))); return; }
+    }
     tryBtn.disabled = true; result.replaceChildren(h("div", { class: "notice neutral", style: "display:flex;gap:10px;align-items:center" }, h("span", { class: "spinner" }), t("a_trying")));
     const t0 = performance.now();
     try {
-      const body = S.mode === "web" ? { kind: "browser_chat", url: S.url, ...(S.adv.inputSelector ? { inputSelector: S.adv.inputSelector } : {}), ...(S.adv.sendSelector ? { sendSelector: S.adv.sendSelector } : {}), ...(S.adv.replySelector ? { replySelector: S.adv.replySelector } : {}) } : { kind: "blackbox_http", endpoint: S.url, mapping: agentSpec().mapping };
-      const r = await call("POST", "/api/connect", body);
-      S.smoke = { ok: r.smoke.ok, reply: r.smoke.finalMessage, reason: r.smoke.reason, ms: Math.round(performance.now() - t0) };
+      const spec = agentSpec();
+      const r = at.check === "bridge" ? await call("POST", "/api/connect", { kind: "http_bridge", endpoint: spec.endpoint }) : await call("POST", "/api/agent/check", spec);
+      S.mcpInfo = r.mcp && !r.mcp.error ? r.mcp : null;
+      S.smoke = { ok: r.smoke.ok, reply: r.smoke.finalMessage, reason: r.smoke.reason || r.mcp?.choice?.error || r.mcp?.error || r.handshake?.error, ms: Math.round(performance.now() - t0) };
     } catch (e) { S.smoke = { ok: false, reason: e.message }; }
     tryBtn.disabled = false; render();
   } }, t("a_try"));
-  const sample = h("button", { type: "button", class: "btn small", onclick: () => { S.mode = "api"; S.url = "http://127.0.0.1:3399/chat"; S.version = S.version || "v1"; S.smoke = null; save(); render(); } }, t("a_sample"));
+  const sample = h("button", { type: "button", class: "btn small", onclick: () => { S.type = "api"; S.f.api = { ...(S.f.api || {}), url: "http://127.0.0.1:3399/chat" }; S.version = S.version || "v1"; reset(); save(); render(); } }, t("a_sample"));
   card.append(h("h1", {}, t("a_title")), h("p", { class: "lead" }, t("a_lead")),
-    h("div", { class: "choices" }, choice("web", "chat", "a_web", "a_web_d"), choice("api", "code", "a_api", "a_api_d")),
-    h("label", { for: "a-url" }, t(S.mode === "web" ? "a_url_web" : "a_url_api")), url,
+    h("label", { for: "a-type" }, t("a_type")), sel,
+    h("div", { class: "typebox" }, h("span", { class: "ic" }, svg(ICON[at.icon] || ICON.code)), h("p", {}, L(at.desc))),
+    keyMissing ? h("div", { class: "notice warn" }, t("a_needs_key")) : "",
+    at.group === "platform" && at.id !== "agents_api" ? h("div", { class: "hint", style: "margin-top:-2px" }, t("a_preset_h")) : "",
+    ...main.flatMap(field),
     h("label", { for: "a-ver" }, t("a_name")), ver, h("div", { class: "hint" }, t("a_name_h")),
-    adv, result,
+    adv.length ? h("details", {}, h("summary", {}, t("a_adv")), ...adv.flatMap(field)) : "",
+    result,
     h("div", { class: "actions" }, tryBtn, sample, h("span", { class: "spacer" }), h("button", { type: "button", class: "btn primary", disabled: !S.smoke?.ok, onclick: () => { S.step = 2; render(); } }, t("next"), " →")));
   m.append(card);
 }
@@ -370,7 +459,7 @@ async function proposeTests(btn, msg) {
   if (btn) btn.disabled = true;
   msg && msg.replaceChildren(h("div", { class: "notice neutral", style: "display:flex;gap:10px;align-items:center" }, h("span", { class: "spinner" }), t("d_going")));
   try {
-    S.plan = await call("POST", "/api/plan", { description: S.desc, specifics: S.spec, lang, agentMode: S.mode === "web" ? "WEB_UI" : "HTTP_API" });
+    S.plan = await call("POST", "/api/plan", { description: S.desc, specifics: S.spec, lang, agentMode: agentType().plan });
     S.picks = Object.fromEntries(S.plan.scenarios.map((s) => [s.id, { on: s.readiness === "READY", task: s.task, approved: false }]));
     S.step = 3; render();
   } catch (e) { msg && msg.replaceChildren(h("div", { class: "notice bad" }, e.message)); if (btn) btn.disabled = false; }
@@ -616,6 +705,7 @@ function route() {
 window.addEventListener("popstate", route);
 paintChrome();
 route();
+call("GET", "/api/meta").then((m) => { S.meta = m; if (S.view === "wizard" && S.step === 1 && agentType().needsKey) render(); }).catch(() => {});
 </script>
 </body>
 </html>

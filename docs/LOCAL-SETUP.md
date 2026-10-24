@@ -50,7 +50,17 @@ Abre **http://127.0.0.1:3001**. El idioma se cambia arriba a la derecha (ES / EN
 
 La interfaz es un asistente de 4 pasos:
 
-1. **Tu agente**: ¿es una página con chat o una API? Pega la dirección y pulsa *Conectar y probar*.
+1. **Tu agente**: elige en la lista dónde vive y llena solo lo que esa opción pide; luego pulsa *Conectar y probar*. Opciones:
+   - **Una página web con chat**: la dirección de la página.
+   - **Una API propia (HTTP/JSON)**: la dirección y, si la pide, una clave. En *Opciones avanzadas*, los nombres de los campos.
+   - **n8n (Chat Trigger)**, **Flowise**, **Dify**, **Langflow**: plantillas con los campos que usa cada plataforma. Solo pegas la dirección y, si la pide, la clave.
+   - **API compatible con OpenAI** (OpenRouter, Ollama, LiteLLM, vLLM, Open WebUI…): dirección base, modelo y clave.
+   - **Agente de OpenAI (Agents API)**: las instrucciones del agente. Requiere `OPENAI_API_KEY`.
+   - **Servidor MCP**: la dirección del servidor; ZeroBug elige la herramienta que recibe mensajes (si hay varias, te deja escoger).
+   - **Puente ZeroBug**: integración completa, para equipos que conectan las herramientas del agente a ZeroBug.
+   - *Próximamente*: Slack, Teams, WhatsApp, Telegram, voz y protocolo A2A.
+
+   Las claves que escribes aquí **no se guardan** en el navegador ni en disco: viven en la memoria del servidor mientras corren las pruebas.
 2. **Qué hace**: descríbelo en una frase (y, si quieres, algo específico a comprobar).
 3. **Pruebas**: ZeroBug propone pruebas. Si alguna necesita leer tu correo, tienda o pagos, te pide conectarlo ahí mismo. Eliges cuántas veces correr cada una.
 4. **Resultados**: cuántas se comprobaron, cuáles fallaron y por qué. Cada corrida muestra "lo que dijo tu agente" junto a "lo que comprobamos".
@@ -75,7 +85,8 @@ Luego, en la interfaz:
    - *Conectar* → las pruebas quedan en **Lista**. Elige *3* veces → *Correr*.
 4. **Resultados**: esperado **6 de 6 comprobadas**, cada una con el correo encontrado en el buzón como evidencia. La prueba "sin duplicados" tarda ~1.5 min por corrida a propósito: espera para ver que no llegue un segundo correo.
 5. ¿Tu agente es una página y no una API? En el paso 1 elige *Una página con chat* y usa `http://127.0.0.1:3399/page` (requiere `npx playwright install chromium`). ZeroBug encuentra solo la caja de texto y lee la respuesta.
-6. Vuelve al paso 1 con la dirección `http://127.0.0.1:3399/liar-chat` (un agente que dice "ya lo envié" sin enviarlo): resultado **Falló**, con la razón.
+6. El mismo agente de ejemplo también se puede probar como **Servidor MCP** (`http://127.0.0.1:3399/mcp`) o como **API compatible con OpenAI** (dirección `http://127.0.0.1:3399/v1`, modelo `mail-agent`).
+7. Vuelve al paso 1 con la dirección `http://127.0.0.1:3399/liar-chat` (un agente que dice "ya lo envié" sin enviarlo): resultado **Falló**, con la razón.
 
 ## 6. Configuración: qué es cada cosa y cuál importa
 

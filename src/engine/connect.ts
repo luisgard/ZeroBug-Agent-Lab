@@ -95,11 +95,13 @@ export async function connectBlackBox(o: {
   endpoint: string;
   mapping: BlackBoxMapping;
   agentToken?: string;
+  headers?: Record<string, string>;
+  extraBody?: Record<string, unknown>;
   policy?: NetPolicy;
   externalOutbox?: ExternalOutboxConfig;
 }): Promise<ConnectReport> {
   const runId = newRunId();
-  const result = await new BlackBoxHttpRunner({ endpoint: o.endpoint, mapping: o.mapping, ...(o.agentToken ? { agentToken: o.agentToken } : {}), ...(o.policy ? { policy: o.policy } : {}) }).run(
+  const result = await new BlackBoxHttpRunner({ endpoint: o.endpoint, mapping: o.mapping, ...(o.agentToken ? { agentToken: o.agentToken } : {}), ...(o.headers ? { headers: o.headers } : {}), ...(o.extraBody ? { extraBody: o.extraBody } : {}), ...(o.policy ? { policy: o.policy } : {}) }).run(
     { runId, task: "ZeroBug connectivity check. Reply with a short greeting. Do not take any action.", tools: [], callTool: async () => ({ success: false, error: "no tools" }), limits: { maxToolCalls: 1, maxSeconds: 20 } },
     () => {},
   );

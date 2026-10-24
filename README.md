@@ -18,6 +18,9 @@ Current status by gate (what is done, partial or blocked, and why): [`WAVE_STATU
 | HTTP bridge | An existing agent you control (LangGraph, Agents SDK, custom…). It calls ZeroBug's run-scoped tool URLs. | Tool calls, cart, orders, emails, secret egress, fault handling |
 | Black-box HTTP | Only a chat URL | The reply. Side effects only through a separately granted read-only verifier; otherwise INCONCLUSIVE |
 | Browser chat (beta) | Only a chat web page | The reply, read in a headless browser. Side effects through connectors |
+| MCP agent | An agent exposed as an MCP server (Streamable HTTP) | The reply of the tool that takes messages. Side effects through connectors |
+| OpenAI-compatible API | Any `/chat/completions` server (OpenRouter, Ollama, LiteLLM, vLLM…) | The reply. Side effects through connectors |
+| Platform templates | n8n Chat Trigger, Flowise, Dify, Langflow (black-box HTTP presets) | The reply. Templates follow each platform's documented API; **not yet run against the real platforms** |
 | OpenAI Agents API | Agents defined by instructions | Everything (instrumented). **BLOCKED in this build: no API key** |
 
 **Real side effects:** with evidence connectors (Gmail API, order/payment APIs, any MCP connector) ZeroBug checks that the email really arrived or the order really exists, for any of the modes above. Setup and validation status: [`docs/CONNECTORS.md`](docs/CONNECTORS.md). Not yet run against a real inbox (needs a QA Gmail account).

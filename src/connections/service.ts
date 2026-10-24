@@ -10,7 +10,7 @@ import { GmailSource } from "../connectors/gmail.ts";
 import { HttpJsonSource } from "../connectors/http-json.ts";
 import { McpSource } from "../connectors/mcp.ts";
 import { type EvidenceSource, FIELD_PATH, type RecordKind, SourceError, WRITE_LIKE } from "../connectors/types.ts";
-import { type NetPolicy, safeFetch, validateUrl } from "../net/safe-fetch.ts";
+import { type NetPolicy, guardedFetch, safeFetch, validateUrl } from "../net/safe-fetch.ts";
 import { newToken, nowIso } from "../util/ids.ts";
 import { CATALOG } from "./catalog.ts";
 import type { SecretBox } from "./secret-box.ts";
@@ -323,15 +323,7 @@ export class ConnectionService {
 }
 
 /** fetch() that goes through the SSRF-safe client: validated, pinned, no redirects, bounded. */
-export function policyFetch(policy: () => NetPolicy): typeof fetch {
-  return (async (input: any, init?: RequestInit) => {
-    const url = String(input instanceof Request ? input.url : input);
-    const headers: Record<string, string> = {};
-    new Headers(init?.headers).forEach((v, k) => (headers[k] = v));
-    const res = await safeFetch(url, { method: (init?.method as "GET" | "POST") ?? "GET", headers, maxRedirects: 0, timeoutMs: 15_000, maxResponseBytes: 2 * 1024 * 1024, policy: policy() });
-    return new Response(res.status === 204 ? null : res.text, { status: res.status < 200 ? 502 : res.status });
-  }) as typeof fetch;
-}
+export const policyFetch = (policy: () => NetPolicy): typeof fetch => guardedFetch(policy);
 
 function uniqueSlug(name: string, taken: string[]): string {
   let base = name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 36) || "source";
