@@ -1,0 +1,7 @@
+# local secrets, never commit
+.env*.local
+.env
+
+# local tooling
+.superpowers/
+node_modules/
