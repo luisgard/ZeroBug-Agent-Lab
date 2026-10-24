@@ -9,7 +9,7 @@ Legend: **DONE** = implemented and exercised by a test or a recorded run in this
 | Command | Result |
 | --- | --- |
 | `npm run typecheck` | clean |
-| `npm test` | 13 files, **146 tests passed**, 0 failed (includes real headless Chromium tests) |
+| `npm test` | 13 files, **148 tests passed**, 0 failed (includes real headless Chromium tests) |
 | `cd examples/external-agent && .venv/bin/python -m unittest discover -s tests` | **5 tests passed** |
 | `npm run test:e2e` (two processes: LangGraph agent + ZeroBug) | **6 tests passed**; live provider test skipped (no key) |
 | `npm run proof` | **BLOCKED** — exit 3, `OPENAI_API_KEY` not set, nothing called |
@@ -34,6 +34,8 @@ Adjustments agreed with the product owner: Gmail read-only is P0 alongside sandb
 | Mailpit test inbox provider | NOT STARTED | A JSON inbox API fixture is used instead (`examples/email-agent/server.cjs`) |
 | Sandbox store + ATS providers | NOT STARTED | Earlier synthetic world covers store scenarios through the bridge only |
 | Downloadable report (JSON/HTML export) | NOT STARTED | Run JSON files exist in `data/runs/` |
+| Simple 4-step wizard UI (agent → what it does → tests → results), ES/EN, light/dark, phone width; old UI at `/advanced` | DONE | Playwright: API agent 6/6 PASS, liar agent FAIL, chat-page agent PASS with automatic input/reply detection |
+| Chat-page agents without CSS selectors (automatic text box + reply detection) | DONE | `tests/browser.test.ts` (real Chromium) |
 | Real third-party agent + real Gmail inbox | **BLOCKED** | Needs a QA Gmail (OAuth client) and a third-party agent URL |
 
 ## Phase A — real-world evidence connectors (added after the first review)

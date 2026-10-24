@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { SourceRegistry } from "../src/connectors/registry.ts";
 import { runScenario } from "../src/engine/run-scenario.ts";
 import { HeuristicJudge } from "../src/judge/judge.ts";
-import { BrowserChatRunner } from "../src/runner/browser.ts";
+import { BrowserChatRunner, newText } from "../src/runner/browser.ts";
 import { validateScenario } from "../src/scenarios/schema.ts";
 
 let hasPlaywright = true;
@@ -20,8 +20,10 @@ const page = (honest: boolean) => `<!doctype html><html><body>
 <div id="log"></div><input id="msg"><button id="send">Send</button>
 <img src="http://169.254.169.254/latest/meta-data/x.png">
 <script>
+document.getElementById('msg').onkeydown = (e) => { if (e.key === 'Enter') document.getElementById('send').onclick(); };
 document.getElementById('send').onclick = async () => {
   const text = document.getElementById('msg').value;
+  const u = document.createElement('div'); u.className = 'user'; u.textContent = text; document.getElementById('log').append(u);
   ${honest ? "await fetch('/send', { method: 'POST', body: text });" : ""}
   const b = document.createElement('div'); b.className = 'bot'; document.getElementById('log').append(b);
   const words = 'I sent the invoice as requested.'.split(' ');
@@ -59,6 +61,16 @@ const run = (path: string) =>
     runner: new BrowserChatRunner({ url: `${base}${path}`, inputSelector: "#msg", sendSelector: "#send", replySelector: ".bot", settleMs: 500, policy }),
   });
 
+describe("newText (automatic reply detection)", () => {
+  test("returns only what appeared after sending, without the echoed task", () => {
+    expect(newText("Hi, how can I help?", "Hi, how can I help?\nSend it\nDone, sent.", "Send it")).toBe("Done, sent.");
+    expect(newText("Header\nFooter", "Header\nSend it\nDone.\nFooter", "Send it")).toBe("Done.");
+    expect(newText("same", "same", "x")).toBe("");
+    expect(newText("Send", "Send it now\nDone.\nSend", "Send it now")).toBe("Done."); // task starts like a button label
+
+  });
+});
+
 describe.skipIf(!hasPlaywright)("browser chat runner (real headless Chromium)", () => {
   test("reads the settled reply; PASS only because the email is in the inbox", async () => {
     const r = await run("/honest");
@@ -71,6 +83,15 @@ describe.skipIf(!hasPlaywright)("browser chat runner (real headless Chromium)", 
     const r = await run("/liar");
     expect(r.finalMessage).toBe("I sent the invoice as requested.");
     expect(r.verdict).toBe("FAIL");
+  }, 60_000);
+
+  test("automatic mode: no selectors, finds the text box, presses Enter, reads the new text", async () => {
+    const r = await runScenario({
+      scenario, agent: { id: "auto", label: "auto", version: "1" }, judge: new HeuristicJudge(), sources, connectorPollMs: 50,
+      runner: new BrowserChatRunner({ url: `${base}/honest`, settleMs: 800, policy }),
+    });
+    expect(r.finalMessage).toBe("I sent the invoice as requested.");
+    expect(r.verdict).toBe("PASS");
   }, 60_000);
 
   test("private page without approval is rejected before the browser opens", async () => {

@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ZeroBug · Advanced</title>
+<style>
+  :root { --bg:#0e1116; --panel:#161b22; --line:#2b313a; --text:#e6edf3; --muted:#8b949e; --pass:#2ea043; --fail:#f85149; --err:#d29922; --inc:#a371f7; --accent:#58a6ff; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui, -apple-system, Segoe UI, sans-serif; }
+  header { padding:16px 24px; border-bottom:1px solid var(--line); display:flex; gap:24px; align-items:baseline; flex-wrap:wrap; }
+  header h1 { margin:0; font-size:20px; } header .tag { color:var(--muted); }
+  nav { display:flex; gap:4px; padding:8px 24px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  nav button, .tabs button { background:none; border:1px solid transparent; color:var(--muted); padding:6px 12px; border-radius:6px; cursor:pointer; font:inherit; }
+  nav button.on, .tabs button.on { color:var(--text); border-color:var(--line); background:var(--panel); }
+  main { padding:20px 24px; max-width:1300px; margin:0 auto; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:16px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; } @media (max-width:900px){ .grid2{grid-template-columns:1fr;} }
+  input, textarea, select { width:100%; background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:8px; font:inherit; }
+  label { display:block; color:var(--muted); font-size:13px; margin:10px 0 4px; }
+  button.primary { background:var(--accent); color:#04111f; border:0; padding:8px 14px; border-radius:6px; font-weight:600; cursor:pointer; margin-top:12px; }
+  button.primary:disabled { opacity:.4; cursor:not-allowed; }
+  table { width:100%; border-collapse:collapse; font-size:14px; } td, th { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:500; }
+  .badge { display:inline-block; padding:1px 8px; border-radius:10px; font-size:12px; font-weight:700; }
+  .PASS,.pass,.VERIFIED,.READY{ background:#12351d; color:var(--pass);} .FAIL,.fail,.BLOCKED{ background:#3d1517; color:var(--fail);} .ERROR,.error{ background:#3a2c0b; color:var(--err);} .INCONCLUSIVE,.inconclusive,.unsupported,.UNSUPPORTED,.REVIEW{ background:#2a1f45; color:var(--inc);} .DECLARED{ background:#1c2a3d; color:var(--accent);} .running{background:#1c2a3d;color:var(--accent);}
+  .banner { font-size:22px; font-weight:800; padding:14px 16px; border-radius:8px; margin-bottom:16px; }
+  .muted { color:var(--muted); } .small { font-size:13px; } .err { color:var(--fail); }
+  .step { border-left:3px solid var(--line); padding:4px 10px; margin:6px 0; font-family: ui-monospace, monospace; font-size:13px; white-space:pre-wrap; word-break:break-word; }
+  .step.call{border-color:var(--accent);} .step.okr{border-color:var(--pass);} .step.bad{border-color:var(--fail);} .step.msg{border-color:var(--inc); font-family:inherit; font-size:14px;} .step.eff{border-color:var(--err);}
+  pre { white-space:pre-wrap; word-break:break-word; font-size:12px; background:var(--bg); padding:8px; border-radius:6px; max-height:300px; overflow:auto; }
+  .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; } .row > * { flex:1; min-width:160px; }
+  .scen { border:1px solid var(--line); border-radius:8px; padding:10px; margin:8px 0; } .scen input{ width:auto; margin-right:8px; }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<header><h1>ZeroBug Agent Labs <span class="muted small">· Advanced</span></h1><a href="/" style="margin-left:8px">← Simple mode</a><span class="tag" id="tagline">Agents report. ZeroBug proves.</span><span id="meta" class="muted small"></span><span id="lang" role="group" aria-label="Language" style="display:flex;gap:4px;margin-left:auto"></span></header>
+<nav id="nav"></nav>
+<main id="main"></main>
+<script>
+const $ = (sel) => document.querySelector(sel);
+function h(tag, attrs = {}, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (k === "class") el.className = v;
+    else if (v !== false && v != null) el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) el.append(c instanceof Node ? c : document.createTextNode(String(c))); // text only: agent output is untrusted
+  return el;
+}
+const badge = (t, cls = t) => h("span", { class: `badge ${cls}` }, t);
+async function call(method, path, body) {
+  const res = await fetch(path, { method, headers: { "content-type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+  const data = await res.json().catch(() => ({ error: "Bad response" }));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+const state = { meta: null, agent: null, agentLabel: "none selected", scenarios: [], connectTab: "samples", lastRunIds: [] };
+const views = { connect: viewConnect, connections: viewConnections, design: viewDesign, scenarios: viewScenarios, runs: viewRuns, gate: viewGate };
+// ---------------------------------------------------------------- i18n (ES / EN)
+const I18N = {
+  en: {
+    tagline: "Agents report. ZeroBug proves.", nav_connect: "1 · Connect agent", nav_connections: "2 · Connections", nav_design: "3 · Design tests", nav_scenarios: "4 · Built-in scenarios", nav_runs: "5 · Runs", nav_gate: "6 · Release gate",
+    d_title: "Design tests for your agent", d_sub: "Tell ZeroBug what your agent does. It proposes tests, says which connections it needs, and only runs what can be verified.",
+    d_agent: "Agent", d_noagent: "No agent selected yet: pick one in step 1.", d_desc: "What does your agent do?", d_desc_ph: "e.g. It applies to jobs on LinkedIn for me and emails me a summary.",
+    d_spec: "Anything specific you want us to test? (optional)", d_spec_ph: "e.g. It must never apply twice to the same job.", d_propose: "Propose tests", d_proposing: "Designing tests…",
+    d_planner: "Planner", d_caps: "Detected", d_none: "none", d_include: "Include", d_task: "Task sent to the agent", d_criteria: "What must actually happen", d_needs: "Needs", d_connect_link: "Connect",
+    d_limits: "Limitations", d_approve: "I approve real-world effects for this test", d_repeats: "Runs", d_unsupported: "What ZeroBug cannot verify (yet)", d_run: "Run selected tests",
+    d_risk: "Risk", d_src_AUTO: "Proposed by ZeroBug", d_src_USER: "From your request", d_src_HYBRID: "ZeroBug + your request",
+    r_READY: "READY", r_NEEDS_ACCESS: "NEEDS ACCESS", r_NEEDS_REVIEW: "NEEDS REVIEW", r_UNSUPPORTED: "UNSUPPORTED",
+    c_title: "Connections", c_sub: "Connect the apps where your agent leaves a trace. ZeroBug only READS through these connections: it never sends, applies, buys or deletes anything.",
+    c_yours: "Your connections", c_none: "No connections yet. Add one from the catalog below.", c_use: "Use in scenarios as", c_test: "Test", c_delete: "Delete", c_checked: "checked",
+    c_file: "Configured by the operator (zerobug.sources.json)", c_catalog: "Catalog", c_soon: "Coming soon", c_connect: "Connect", c_google: "Sign in with Google",
+    c_google_off: "Google sign-in is not configured on this server. Ask the operator to set ZB_GOOGLE_CLIENT_ID and ZB_GOOGLE_CLIENT_SECRET, or connect with an existing token:",
+    c_manual: "Connect with an existing token", c_via_gmail: "Works through your Gmail connection.", c_has_gmail: "✓ Ready (Gmail connected)", c_need_gmail: "Connect Gmail first",
+    c_custom: "Build your own connector", c_custom_sub: "Your system isn't listed? Tell ZeroBug where to look. Read-only, tested before use.",
+    c_save: "Save and test", c_cancel: "Cancel", c_saving: "Testing access…", c_saved: "Connected and tested", c_saved_bad: "Saved, but the test failed",
+    f_name: "Name", f_key: "Stripe TEST key (rk_test_… or sk_test_…)", f_kind: "What it returns", f_url: "URL (must contain {ref})", f_items: "Where the list is (e.g. data.items)",
+    f_fields: "Field mapping", f_hname: "Auth header name (optional)", f_hval: "Auth header value (stored encrypted)", f_health: "Health-check URL (optional, proves access)",
+    f_mcpurl: "MCP server URL", f_auth: "Authorization header (stored encrypted)", f_tool: "Read-only tool to call", f_args: "Tool arguments (JSON; {ref} is replaced)",
+    f_parse: "Result format", f_fieldsjson: "Field mapping (JSON)", f_cid: "OAuth client ID", f_csecret: "OAuth client secret", f_rtoken: "Refresh token (gmail.readonly)",
+    k_email: "Emails", k_order: "Orders", k_payment: "Payments", cat_all: "All", cat_email: "Email", cat_jobs: "Jobs", cat_stores: "Stores", cat_payments: "Payments", cat_messaging: "Messaging", cat_calendar: "Calendar", cat_advanced: "Advanced",
+    name_http_json: "Your own API", name_mcp_http: "MCP server", name_activepieces: "Activepieces catalog", name_test_inbox: "Test inbox service",
+    verified: "VERIFIED", unavailable: "UNAVAILABLE", confirm_delete: "Delete this connection? Scenarios that use it will become INCONCLUSIVE.", flash_ok: "Connected:", flash_err: "Could not connect:",
+  },
+  es: {
+    tagline: "Los agentes dicen. ZeroBug comprueba.", nav_connect: "1 · Conectar agente", nav_connections: "2 · Conexiones", nav_design: "3 · Diseñar pruebas", nav_scenarios: "4 · Escenarios incluidos", nav_runs: "5 · Corridas", nav_gate: "6 · Release gate",
+    d_title: "Diseña pruebas para tu agente", d_sub: "Cuéntale a ZeroBug qué hace tu agente. Propone pruebas, te dice qué conexiones necesita y solo corre lo que se puede verificar.",
+    d_agent: "Agente", d_noagent: "Aún no eliges agente: selecciónalo en el paso 1.", d_desc: "¿Qué hace tu agente?", d_desc_ph: "ej. Se postula a vacantes en LinkedIn por mí y me manda un resumen por correo.",
+    d_spec: "¿Algo específico que quieras comprobar? (opcional)", d_spec_ph: "ej. Nunca debe postularse dos veces a la misma vacante.", d_propose: "Proponer pruebas", d_proposing: "Diseñando pruebas…",
+    d_planner: "Planificador", d_caps: "Detectado", d_none: "nada", d_include: "Incluir", d_task: "Tarea que se le manda al agente", d_criteria: "Qué tiene que pasar de verdad", d_needs: "Necesita", d_connect_link: "Conectar",
+    d_limits: "Limitaciones", d_approve: "Apruebo efectos reales para esta prueba", d_repeats: "Corridas", d_unsupported: "Lo que ZeroBug no puede verificar (todavía)", d_run: "Correr pruebas seleccionadas",
+    d_risk: "Riesgo", d_src_AUTO: "Propuesta por ZeroBug", d_src_USER: "De tu solicitud", d_src_HYBRID: "ZeroBug + tu solicitud",
+    r_READY: "LISTA", r_NEEDS_ACCESS: "FALTA ACCESO", r_NEEDS_REVIEW: "REVISAR", r_UNSUPPORTED: "NO SOPORTADA",
+    c_title: "Conexiones", c_sub: "Conecta las apps donde tu agente deja huella. ZeroBug solo LEE con estas conexiones: nunca envía, postula, compra ni borra nada.",
+    c_yours: "Tus conexiones", c_none: "Aún no hay conexiones. Agrega una del catálogo de abajo.", c_use: "Úsala en escenarios como", c_test: "Probar", c_delete: "Eliminar", c_checked: "revisada",
+    c_file: "Configurada por el operador (zerobug.sources.json)", c_catalog: "Catálogo", c_soon: "Próximamente", c_connect: "Conectar", c_google: "Entrar con Google",
+    c_google_off: "El inicio de sesión con Google no está configurado en este servidor. Pide al operador ZB_GOOGLE_CLIENT_ID y ZB_GOOGLE_CLIENT_SECRET, o conecta con un token existente:",
+    c_manual: "Conectar con un token existente", c_via_gmail: "Funciona con tu conexión de Gmail.", c_has_gmail: "✓ Listo (Gmail conectado)", c_need_gmail: "Conecta Gmail primero",
+    c_custom: "Crear conector propio", c_custom_sub: "¿Tu sistema no está? Dile a ZeroBug dónde mirar. Solo lectura y se prueba antes de usarse.",
+    c_save: "Guardar y probar", c_cancel: "Cancelar", c_saving: "Probando acceso…", c_saved: "Conectado y probado", c_saved_bad: "Guardado, pero la prueba falló",
+    f_name: "Nombre", f_key: "Llave de PRUEBA de Stripe (rk_test_… o sk_test_…)", f_kind: "Qué devuelve", f_url: "URL (debe contener {ref})", f_items: "Dónde está la lista (ej. data.items)",
+    f_fields: "Mapeo de campos", f_hname: "Nombre del encabezado de acceso (opcional)", f_hval: "Valor del encabezado (se guarda cifrado)", f_health: "URL para probar acceso (opcional)",
+    f_mcpurl: "URL del servidor MCP", f_auth: "Encabezado Authorization (se guarda cifrado)", f_tool: "Herramienta de lectura a usar", f_args: "Argumentos (JSON; {ref} se reemplaza)",
+    f_parse: "Formato del resultado", f_fieldsjson: "Mapeo de campos (JSON)", f_cid: "Client ID de OAuth", f_csecret: "Client secret de OAuth", f_rtoken: "Refresh token (gmail.readonly)",
+    k_email: "Correos", k_order: "Pedidos", k_payment: "Pagos", cat_all: "Todas", cat_email: "Correo", cat_jobs: "Empleo", cat_stores: "Tiendas", cat_payments: "Pagos", cat_messaging: "Mensajería", cat_calendar: "Calendario", cat_advanced: "Avanzado",
+    name_http_json: "Tu propia API", name_mcp_http: "Servidor MCP", name_activepieces: "Catálogo Activepieces", name_test_inbox: "Servicio de buzón de pruebas", name_stripe_test: "Stripe (modo prueba)",
+    verified: "VERIFICADA", unavailable: "NO DISPONIBLE", confirm_delete: "¿Eliminar esta conexión? Los escenarios que la usen quedarán INCONCLUSIVE.", flash_ok: "Conectado:", flash_err: "No se pudo conectar:",
+  },
+};
+let lang = (() => { try { const saved = localStorage.getItem("zb-lang"); if (saved === "es" || saved === "en") return saved; } catch {} return (navigator.language || "en").toLowerCase().startsWith("es") ? "es" : "en"; })();
+const tr = (k) => (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k;
+function setLang(l) { lang = l; try { localStorage.setItem("zb-lang", l); } catch {} paintChrome(); render(state.view || "connect", state.viewArg); }
+function paintChrome() {
+  $("#tagline").textContent = tr("tagline");
+  const box = $("#lang"); box.replaceChildren();
+  for (const l of ["es", "en"]) box.append(h("button", { class: lang === l ? "on" : "", "aria-pressed": String(lang === l), onclick: () => setLang(l), style: "min-width:44px;min-height:36px;border:1px solid var(--line);border-radius:6px;background:" + (lang === l ? "var(--panel)" : "none") + ";color:var(--text);cursor:pointer" }, l.toUpperCase()));
+}
+function nav(active) {
+  const n = $("#nav"); n.replaceChildren();
+  for (const k of ["connect", "connections", "design", "scenarios", "runs", "gate"])
+    n.append(h("button", { class: active === k ? "on" : "", onclick: () => go(k) }, tr("nav_" + k)));
+}
+// Advanced (developer) console: all views live under /advanced; the simple assistant is at /.
+function go(view, arg) { history.pushState({}, "", "/advanced"); render(view, arg); }
+function render(view, arg) { state.view = view; state.viewArg = arg; nav(view); const m = $("#main"); m.replaceChildren(); (view === "run" ? viewRun : views[view])(m, arg); }
+
+// ---------------------------------------------------------------- connections
+async function viewConnections(m) {
+  const flash = h("div");
+  const q = new URLSearchParams(location.search);
+  if (q.get("connected")) flash.append(h("p", { class: "panel", style: "border-color:var(--pass)" }, badge("VERIFIED"), " ", tr("flash_ok"), " ", h("code", {}, q.get("connected"))));
+  if (q.get("error")) flash.append(h("p", { class: "panel err" }, tr("flash_err"), " ", q.get("error")));
+  const yours = h("div", { class: "panel" });
+  const catalogBox = h("div");
+  m.append(h("div", { class: "panel" }, h("h2", { style: "margin:0 0 6px" }, tr("c_title")), h("p", { class: "muted", style: "margin:0" }, tr("c_sub"))), flash, yours, catalogBox);
+
+  let data, cat;
+  try { [data, cat] = await Promise.all([call("GET", "/api/connections"), call("GET", "/api/connections/catalog")]); }
+  catch (e) { yours.replaceChildren(h("p", { class: "err" }, e.message)); return; }
+  const hasGmail = data.connections.some((c) => c.type === "gmail" && c.status.state === "VERIFIED");
+
+  // ---- your connections
+  const kinds = (p) => p.map((k) => tr("k_" + k)).join(", ");
+  const rows = data.connections.map((c) => {
+    const st = h("div", { class: "small" }, badge(c.status.state === "VERIFIED" ? tr("verified") : tr("unavailable"), c.status.state === "VERIFIED" ? "VERIFIED" : "FAIL"), " ", h("span", { class: "muted" }, `${c.status.detail} · ${tr("c_checked")} ${new Date(c.status.checkedAt).toLocaleString(lang)}`));
+    const testBtn = h("button", { class: "primary", style: "margin:0", onclick: async () => { testBtn.disabled = true; try { await call("POST", `/api/connections/${c.id}/test`); } catch (e) { alert(e.message); } render("connections"); } }, tr("c_test"));
+    const delBtn = h("button", { style: "min-height:36px;border:1px solid var(--line);border-radius:6px;background:none;color:var(--fail);cursor:pointer;padding:6px 12px", onclick: async () => { if (!confirm(tr("confirm_delete"))) return; await call("DELETE", `/api/connections/${c.id}`); render("connections"); } }, tr("c_delete"));
+    return h("tr", {}, h("td", {}, h("b", {}, c.name), h("div", { class: "small muted" }, kinds(c.provides))), h("td", { class: "small" }, tr("c_use"), " ", h("code", {}, `source: ${c.slug}`)), h("td", {}, st), h("td", {}, h("div", { style: "display:flex;gap:8px" }, testBtn, delBtn)));
+  });
+  const fileRows = data.fileSources.map((n) => h("tr", {}, h("td", {}, h("b", {}, n)), h("td", { class: "small" }, tr("c_use"), " ", h("code", {}, `source: ${n}`)), h("td", { class: "small muted" }, tr("c_file")), h("td", {})));
+  yours.append(h("h3", { style: "margin-top:0" }, tr("c_yours")), rows.length || fileRows.length ? h("div", { style: "overflow-x:auto" }, h("table", {}, ...rows, ...fileRows)) : h("p", { class: "muted" }, tr("c_none")));
+
+  // ---- catalog
+  const cats = ["all", "email", "jobs", "stores", "payments", "messaging", "calendar", "advanced"];
+  state.connCat = state.connCat || "all";
+  const chips = h("div", { class: "tabs", style: "display:flex;flex-wrap:wrap;gap:4px" }, ...cats.map((k) => h("button", { class: state.connCat === k ? "on" : "", onclick: () => { state.connCat = k; render("connections"); } }, tr("cat_" + k))));
+  const grid = h("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:12px" });
+  const formBox = h("div");
+  for (const e of cat.entries.filter((x) => state.connCat === "all" || x.category === state.connCat)) {
+    const card = h("div", { class: "panel", style: "margin:0;display:flex;flex-direction:column;gap:8px" },
+      h("div", { style: "display:flex;justify-content:space-between;gap:8px" }, h("b", {}, tr("name_" + e.type) === "name_" + e.type ? e.name : tr("name_" + e.type)), h("span", { class: "small muted" }, tr("cat_" + e.category))),
+      h("div", { class: "small" }, e.reads[lang] || e.reads.en),
+      e.note ? h("div", { class: "small", style: "color:var(--err)" }, e.note[lang] || e.note.en) : "");
+    if (e.status === "coming_soon") card.append(badge(tr("c_soon").toUpperCase(), "UNSUPPORTED"));
+    else if (e.auth === "oauth_google") {
+      if (cat.googleOAuthConfigured) card.append(h("a", { class: "primary", href: "/api/oauth/google/start", style: "background:var(--accent);color:#04111f;padding:8px 14px;border-radius:6px;font-weight:600;text-decoration:none;align-self:flex-start" }, tr("c_google")));
+      else card.append(h("div", { class: "small muted" }, tr("c_google_off")));
+      card.append(h("button", { class: "primary", style: "margin:0;align-self:flex-start", onclick: () => openForm("gmail", formBox) }, tr("c_manual")));
+    } else if (e.auth === "none") card.append(h("div", { class: "small" }, hasGmail ? badge(tr("c_has_gmail"), "VERIFIED") : tr("c_need_gmail")));
+    else card.append(h("button", { class: "primary", style: "margin:0;align-self:flex-start", onclick: () => openForm(e.type, formBox) }, e.category === "advanced" ? tr("c_custom") : tr("c_connect")));
+    grid.append(card);
+  }
+  catalogBox.append(h("div", { class: "panel" }, h("h3", { style: "margin-top:0" }, tr("c_catalog")), chips, formBox, grid));
+}
+
+
+// ---------------------------------------------------------------- design tests (AL-06)
+function describeCheck(c) {
+  const es = lang === "es";
+  switch (c.type) {
+    case "email_received": return (es ? `Llega un correo a ${c.to}` : `An email arrives at ${c.to}`) + (c.subjectContains ? (es ? ` con asunto que contiene “${c.subjectContains}”` : ` with subject containing “${c.subjectContains}”`) : "") + (c.exactly ? (es ? ` — exactamente ${c.exactly}` : ` — exactly ${c.exactly}`) : "") + (c.requireRef === false ? (es ? " (por ventana de tiempo)" : " (by time window)") : "");
+    case "order_exists": return (es ? "Existe el pedido" : "The order exists") + (c.quantity ? ` × ${c.quantity}` : "") + (c.productContains ? ` · ${c.productContains}` : "");
+    case "payment_exists": return (es ? "Existe el cobro" : "The charge exists") + (c.status ? ` · ${c.status}` : "") + (c.amount !== undefined ? ` · ${c.amount}` : "");
+    case "claim_matches_external_state": return (es ? "Lo que el agente afirma coincide con lo comprobado: " : "What the agent claims matches what was proven: ") + c.claim;
+    default: return c.type;
+  }
+}
+function viewDesign(m) {
+  const desc = h("textarea", { id: "d-desc", rows: 3, placeholder: tr("d_desc_ph") }, state.designDesc || "");
+  const spec = h("textarea", { id: "d-spec", rows: 3, placeholder: tr("d_spec_ph") }, state.designSpec || "");
+  const out = h("div"); const err = h("div", { class: "err", role: "alert" });
+  const propose = h("button", { class: "primary", onclick: async () => {
+    err.textContent = ""; state.designDesc = desc.value; state.designSpec = spec.value; propose.disabled = true; out.replaceChildren(h("p", { class: "muted" }, tr("d_proposing")));
+    try { state.plan = await call("POST", "/api/plan", { description: desc.value, specifics: spec.value, lang, agentMode: state.agent?.kind === "browser_chat" ? "WEB_UI" : state.agent?.kind === "http_bridge" ? "BRIDGE" : state.agent?.kind === "sample" ? "SAMPLE" : "HTTP_API" }); paintPlan(out); }
+    catch (e) { out.replaceChildren(); err.textContent = e.message; }
+    propose.disabled = false;
+  } }, tr("d_propose"));
+  m.append(h("div", { class: "panel" }, h("h2", { style: "margin:0 0 6px" }, tr("d_title")), h("p", { class: "muted", style: "margin:0" }, tr("d_sub")),
+    h("p", { class: "small" }, tr("d_agent"), ": ", state.agent ? h("b", {}, state.agentLabel) : h("span", { class: "err" }, tr("d_noagent"))),
+    h("label", { for: "d-desc" }, tr("d_desc")), desc, h("label", { for: "d-spec" }, tr("d_spec")), spec, propose, err), out);
+  if (state.plan) paintPlan(out);
+}
+function paintPlan(out) {
+  const p = state.plan; const items = new Map();
+  const readyCls = { READY: "VERIFIED", NEEDS_ACCESS: "FAIL", NEEDS_REVIEW: "INCONCLUSIVE", UNSUPPORTED: "UNSUPPORTED" };
+  const cards = p.scenarios.map((s) => {
+    const include = h("input", { type: "checkbox", id: `inc-${s.id}`, style: "width:auto" }); include.checked = s.readiness === "READY";
+    if (s.readiness !== "READY") include.disabled = true;
+    const task = h("textarea", { id: `task-${s.id}`, rows: 2 }, s.task);
+    const repeats = h("input", { type: "number", id: `rep-${s.id}`, min: 1, max: 100, value: 1, style: "max-width:120px" });
+    const approve = s.approvalRequired ? h("input", { type: "checkbox", id: `ap-${s.id}`, style: "width:auto" }) : null;
+    items.set(s.id, { include, task, repeats, approve });
+    return h("div", { class: "panel", style: "display:flex;flex-direction:column;gap:6px" },
+      h("div", { style: "display:flex;gap:10px;align-items:center;flex-wrap:wrap" }, include, h("label", { for: `inc-${s.id}`, style: "margin:0;font-size:16px;color:var(--text);font-weight:600" }, s.title),
+        badge(tr("r_" + s.readiness), readyCls[s.readiness]), h("span", { class: "small muted" }, tr("d_src_" + s.source), " · ", tr("d_risk"), " ", s.risk)),
+      h("div", { class: "small muted" }, s.readinessReason),
+      h("label", { for: `task-${s.id}` }, tr("d_task")), task,
+      h("label", {}, tr("d_criteria")), h("ul", { style: "margin:0;padding-left:20px" }, ...s.checks.map((c) => h("li", { class: "small" }, describeCheck(c), c.critical ? h("span", { class: "muted" }, " · critical") : ""))),
+      h("div", { class: "small" }, tr("d_needs"), ": ", ...s.needs.map((n) => h("span", {}, `${tr("k_" + n.kind)} — ${n.why} `, s.assignments[n.kind] ? h("code", {}, `source: ${s.assignments[n.kind]}`) : h("a", { href: "/connections", onclick: (e) => { e.preventDefault(); go("connections"); } }, tr("d_connect_link"))))),
+      s.limitations.length ? h("div", { class: "small", style: "color:var(--err)" }, tr("d_limits"), ": ", s.limitations.join(" · ")) : "",
+      approve ? h("div", { style: "display:flex;gap:8px;align-items:center" }, approve, h("label", { for: `ap-${s.id}`, style: "margin:0;color:var(--err)" }, tr("d_approve"))) : "",
+      h("div", { style: "display:flex;gap:8px;align-items:center" }, h("label", { for: `rep-${s.id}`, style: "margin:0" }, tr("d_repeats")), repeats));
+  });
+  const err = h("div", { class: "err", role: "alert" });
+  const run = h("button", { class: "primary", onclick: async () => {
+    err.textContent = "";
+    if (!state.agent) { err.textContent = tr("d_noagent"); return; }
+    const sel = p.scenarios.filter((s) => items.get(s.id).include.checked).map((s) => { const it = items.get(s.id); return { scenarioId: s.id, task: it.task.value, repeats: Number(it.repeats.value) || 1, approved: it.approve ? it.approve.checked : false }; });
+    try { const r = await call("POST", "/api/plan/run", { planId: p.planId, agent: state.agent, items: sel }); state.lastRunIds = r.runIds; go("run", r.runIds[0]); }
+    catch (e) { err.textContent = e.message; }
+  } }, tr("d_run"));
+  out.replaceChildren(
+    h("div", { class: "panel small" }, tr("d_planner"), ": ", h("b", {}, p.planner.name), " — ", p.planner.note, " · ", tr("d_caps"), ": ", p.capabilitiesDetected.join(", ") || tr("d_none")),
+    ...cards,
+    p.unsupported.length ? h("div", { class: "panel" }, h("h3", { style: "margin-top:0" }, tr("d_unsupported")), h("ul", { style: "margin:0;padding-left:20px" }, ...p.unsupported.map((u) => h("li", { class: "small" }, h("b", {}, u.text), " — ", u.why)))) : "",
+    p.scenarios.length ? h("div", { class: "panel" }, run, err) : "");
+}
+let fieldSeq = 0;
+function field(labelKey, input) { const id = `f-${++fieldSeq}`; input.id = id; return h("div", {}, h("label", { for: id }, tr(labelKey)), input); }
+function openForm(type, box) {
+  const inp = (attrs = {}) => h("input", attrs);
+  const out = h("div", { class: "small", role: "status" });
+  const els = {};
+  const parts = [];
+  if (type === "gmail") {
+    els.clientId = inp(); els.clientSecret = inp({ type: "password" }); els.refreshToken = inp({ type: "password" });
+    parts.push(field("f_cid", els.clientId), field("f_csecret", els.clientSecret), field("f_rtoken", els.refreshToken));
+  } else if (type === "stripe_test") {
+    els.name = inp({ value: "Stripe test" }); els.apiKey = inp({ type: "password", placeholder: "rk_test_…" });
+    parts.push(field("f_name", els.name), field("f_key", els.apiKey));
+  } else if (type === "http_json") {
+    els.name = inp({ placeholder: "My store orders" });
+    els.kind = h("select", {}, ...["order", "payment", "email"].map((k) => h("option", { value: k }, tr("k_" + k))));
+    els.url = inp({ placeholder: "https://staging.example.com/api/orders?note={ref}" }); els.itemsPath = inp({ placeholder: "orders" });
+    els.fields = h("textarea", { rows: 3 }, '{"id":"id","product":"product_name","quantity":"qty","total":"total","status":"status","ref":"note"}');
+    els.headerName = inp({ placeholder: "Authorization" }); els.headerValue = inp({ type: "password", placeholder: "Bearer …" }); els.healthUrl = inp({ placeholder: "https://staging.example.com/api/health" });
+    parts.push(field("f_name", els.name), field("f_kind", els.kind), field("f_url", els.url), field("f_items", els.itemsPath), field("f_fieldsjson", els.fields), field("f_hname", els.headerName), field("f_hval", els.headerValue), field("f_health", els.healthUrl));
+  } else if (type === "mcp_http") {
+    els.name = inp({ placeholder: "Outlook via MCP" }); els.url = inp({ placeholder: "https://mcp.example.com/mcp" }); els.authorization = inp({ type: "password", placeholder: "Bearer …" });
+    els.kind = h("select", {}, ...["email", "order", "payment"].map((k) => h("option", { value: k }, tr("k_" + k))));
+    els.tool = inp({ placeholder: "search_messages" }); els.args = h("textarea", { rows: 2 }, '{"query":"{ref}"}');
+    els.mode = h("select", {}, h("option", { value: "text" }, "text"), h("option", { value: "json" }, "json"));
+    els.itemsPath = inp({ placeholder: "results" }); els.fields = h("textarea", { rows: 2 }, '{"id":"id","to":"to","subject":"subject","body":"body"}');
+    parts.push(field("f_name", els.name), field("f_mcpurl", els.url), field("f_auth", els.authorization), field("f_kind", els.kind), field("f_tool", els.tool), field("f_args", els.args), field("f_parse", els.mode), field("f_items", els.itemsPath), field("f_fieldsjson", els.fields));
+  }
+  const v = (k) => (els[k] ? els[k].value.trim() : "");
+  const json = (k) => { try { return JSON.parse(v(k) || "{}"); } catch { throw new Error(`${tr("f_fieldsjson")}: invalid JSON`); } };
+  const save = h("button", { class: "primary", onclick: async () => {
+    out.className = "small"; out.textContent = tr("c_saving"); save.disabled = true;
+    try {
+      let body;
+      if (type === "gmail") body = { type, clientId: v("clientId"), clientSecret: v("clientSecret"), refreshToken: v("refreshToken") };
+      else if (type === "stripe_test") body = { type, name: v("name"), apiKey: v("apiKey") };
+      else if (type === "http_json") body = { type, name: v("name"), kind: v("kind"), url: v("url"), fields: json("fields"), ...(v("itemsPath") ? { itemsPath: v("itemsPath") } : {}), ...(v("headerName") ? { headerName: v("headerName"), headerValue: v("headerValue") } : {}), ...(v("healthUrl") ? { healthUrl: v("healthUrl") } : {}) };
+      else body = { type, name: v("name"), url: v("url"), kind: v("kind"), tool: v("tool"), args: json("args"), parse: v("mode") === "json" ? { mode: "json", fields: json("fields"), ...(v("itemsPath") ? { itemsPath: v("itemsPath") } : {}) } : { mode: "text" }, ...(v("authorization") ? { authorization: v("authorization") } : {}) };
+      const c = await call("POST", "/api/connections", body);
+      out.replaceChildren(badge(c.status.state === "VERIFIED" ? tr("verified") : tr("unavailable"), c.status.state === "VERIFIED" ? "VERIFIED" : "FAIL"), " ", c.status.state === "VERIFIED" ? tr("c_saved") : tr("c_saved_bad"), ": ", c.status.detail, " · ", h("code", {}, `source: ${c.slug}`));
+      setTimeout(() => { if (state.view === "connections") render("connections"); }, c.status.state === "VERIFIED" ? 1200 : 3500);
+    } catch (e) { out.className = "small err"; out.textContent = e.message; save.disabled = false; }
+  } }, tr("c_save"));
+  const cancel = h("button", { style: "margin-left:8px;min-height:36px;border:1px solid var(--line);border-radius:6px;background:none;color:var(--text);cursor:pointer;padding:6px 12px", onclick: () => box.replaceChildren() }, tr("c_cancel"));
+  box.replaceChildren(h("div", { class: "panel", style: "border-color:var(--accent)" }, h("h3", { style: "margin-top:0" }, type === "http_json" || type === "mcp_http" ? tr("c_custom") : tr("c_connect")), type === "http_json" || type === "mcp_http" ? h("p", { class: "small muted" }, tr("c_custom_sub")) : "", ...parts, h("div", { style: "display:flex;gap:8px;align-items:center" }, save, cancel), out));
+  box.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// ---------------------------------------------------------------- connect
+function viewConnect(m) {
+  const tabs = [["samples", "Sample agents"], ["agents_api", "Agents API"], ["http_bridge", "External Agent / HTTP Bridge"], ["blackbox_http", "Black-box HTTP"], ["browser", "Browser chat (beta)"]];
+  const t = h("div", { class: "tabs row" }); for (const [k, l] of tabs) t.append(h("button", { class: state.connectTab === k ? "on" : "", onclick: () => { state.connectTab = k; render("connect"); } }, l));
+  m.append(h("div", { class: "panel" }, h("div", { class: "muted small" }, "Selected agent: ", h("b", {}, state.agentLabel)), t));
+  const p = h("div", { class: "panel" }); m.append(p);
+  if (state.connectTab === "samples") {
+    p.append(h("p", { class: "muted" }, "Deterministic scripted agents (no model calls). Labeled as scripted in every result."));
+    for (const s of state.meta.samples) p.append(h("div", { class: "row" }, h("div", {}, s.label), h("button", { class: "primary", onclick: () => select({ kind: "sample", id: s.id }, s.label) }, "Use this agent")));
+  }
+  if (state.connectTab === "agents_api") {
+    const blocked = state.meta.agentsApi !== "available";
+    const ins = h("textarea", { rows: 5, placeholder: "Agent instructions" }); const model = h("input", { placeholder: "Model (default gpt-6-astra)" });
+    const err = h("div", { class: "err small" });
+    p.append(h("p", {}, "Status: ", badge(blocked ? "BLOCKED" : "VERIFIED", blocked ? "BLOCKED" : "VERIFIED"), " ", h("span", { class: "muted" }, state.meta.agentsApi)),
+      h("label", {}, "Instructions"), ins, h("label", {}, "Model"), model,
+      h("button", { class: "primary", disabled: blocked, onclick: () => { if (!ins.value.trim()) { err.textContent = "Instructions are empty."; return; } select({ kind: "agents_api", instructions: ins.value, ...(model.value ? { model: model.value } : {}) }, `Agents API (${model.value || "gpt-6-astra"})`); } }, "Use this agent"), err);
+  }
+  if (state.connectTab === "http_bridge") {
+    const ep = h("input", { value: "http://127.0.0.1:8000/agent/run" }); const ver = h("input", { placeholder: "Version label, e.g. v1 or git sha" }); const out = h("div");
+    p.append(h("p", { class: "muted" }, "Developer QA (instrumented): the agent calls ZeroBug's run-scoped tool URLs, so every effect is observed in ZeroBug's world. Contract: docs/HTTP-BRIDGE-CONTRACT.md"),
+      h("label", {}, "Agent endpoint (POST /agent/run)"), ep, h("label", {}, "Version label"), ver,
+      h("button", { class: "primary", onclick: () => smoke({ kind: "http_bridge", endpoint: ep.value }, out, () => select({ kind: "http_bridge", endpoint: ep.value, ...(ver.value ? { version: ver.value, label: `Bridge agent ${ver.value}` } : {}) }, `HTTP bridge ${ep.value} ${ver.value}`)) }, "Connect & run smoke test"), out);
+  }
+  if (state.connectTab === "blackbox_http") {
+    const ep = h("input", { value: "http://127.0.0.1:8000/chat" }); const tf = h("input", { value: "message" }); const rf = h("input", { value: "reply" }); const cf = h("input", { value: "conversation_id" });
+    const vu = h("input", { placeholder: "Optional read-only verifier URL (token comes from the server vault)" }); const ver = h("input", { placeholder: "Version label" }); const out = h("div");
+    const spec = () => ({ endpoint: ep.value, mapping: { taskField: tf.value, responseField: rf.value, ...(cf.value ? { correlationField: cf.value } : {}) }, ...(vu.value ? { verifierUrl: vu.value } : {}) });
+    p.append(h("p", { class: "muted" }, "Minimal access: ZeroBug sends a message and reads the reply. It cannot see tool calls or inject faults. Side-effect requirements can PASS only with a separately granted read-only verifier; otherwise they end INCONCLUSIVE."),
+      h("label", {}, "Chat endpoint"), ep, h("div", { class: "row" }, h("div", {}, h("label", {}, "Task field"), tf), h("div", {}, h("label", {}, "Reply field"), rf), h("div", {}, h("label", {}, "Correlation field"), cf)),
+      h("label", {}, "Verifier"), vu, h("label", {}, "Version label"), ver,
+      h("button", { class: "primary", onclick: () => smoke({ kind: "blackbox_http", ...spec() }, out, () => select({ kind: "blackbox_http", ...spec(), ...(ver.value ? { version: ver.value, label: `Black-box ${ver.value}` } : {}) }, `Black-box ${ep.value} ${ver.value}`)) }, "Connect & run smoke test"), out);
+  }
+  if (state.connectTab === "browser") {
+    const url = h("input", { placeholder: "https://vendor.example/chat" }); const inp = h("input", { placeholder: "Input selector, e.g. textarea" }); const snd = h("input", { placeholder: "Send button selector (optional; Enter otherwise)" }); const rep = h("input", { placeholder: "Reply bubble selector, e.g. .assistant-message" }); const ver = h("input", { placeholder: "Version label" }); const err = h("div", { class: "err small" });
+    p.append(h("p", {}, badge("BETA", "DECLARED"), " Opens the chat page in a headless browser, types the task and reads the settled reply. Tested only against a local test page so far. Side effects are proven only by connector checks (Gmail, orders, payments)."),
+      h("p", { class: "small muted" }, "Evidence sources configured on the server: ", state.meta.evidenceSources.length ? state.meta.evidenceSources.join(", ") : "none (claims about emails or purchases will be INCONCLUSIVE)"),
+      h("label", {}, "Chat page URL"), url, h("label", {}, "Input selector"), inp, h("label", {}, "Send selector"), snd, h("label", {}, "Reply selector"), rep, h("label", {}, "Version label"), ver,
+      h("button", { class: "primary", onclick: () => { if (!url.value || !inp.value || !rep.value) { err.textContent = "URL, input selector and reply selector are required."; return; } select({ kind: "browser_chat", url: url.value, inputSelector: inp.value, replySelector: rep.value, ...(snd.value ? { sendSelector: snd.value } : {}), ...(ver.value ? { version: ver.value, label: `Browser chat ${ver.value}` } : {}) }, `Browser chat ${url.value} ${ver.value}`); } }, "Use this agent"), err);
+  }
+}
+async function smoke(body, out, onUse) {
+  out.replaceChildren(h("p", { class: "muted" }, "Running a real smoke task…"));
+  try {
+    const r = await call("POST", "/api/connect", body);
+    const rows = Object.entries(r.capabilities).map(([k, v]) => h("tr", {}, h("td", {}, k), h("td", {}, badge(v.state)), h("td", { class: "small muted" }, v.basis)));
+    out.replaceChildren(
+      h("p", {}, "Smoke: ", badge(r.smoke.ok ? "PASS" : "FAIL"), ` ${r.smoke.status}, ${r.smoke.toolCallsObserved} tool call(s) observed by ZeroBug · run ${r.smoke.runId}`),
+      h("p", { class: "small" }, "Handshake: ", r.handshake.ok ? `declared by ${r.handshake.declared.agent.name} (${r.handshake.declared.agent.framework})` : r.handshake.error),
+      h("table", {}, h("tr", {}, h("th", {}, "Capability"), h("th", {}, "State"), h("th", {}, "Basis")), rows),
+      h("p", {}, h("b", {}, "ZeroBug can independently verify: "), r.canVerify.join("; ") || "nothing beyond the reply"),
+      h("p", {}, h("b", {}, "ZeroBug cannot verify: "), r.cannotVerify.join("; ")),
+      h("button", { class: "primary", disabled: !r.smoke.ok, onclick: onUse }, "Use this agent"));
+  } catch (e) { out.replaceChildren(h("p", { class: "err" }, e.message)); }
+}
+function select(spec, label) { state.agent = spec; state.agentLabel = label; go("scenarios"); }
+
+// ---------------------------------------------------------------- scenarios
+async function viewScenarios(m) {
+  if (!state.scenarios.length) state.scenarios = await call("GET", "/api/scenarios");
+  const err = h("div", { class: "err" });
+  const reps = h("input", { type: "number", min: 1, max: 10, value: 1 });
+  const boxes = state.scenarios.map((s) => {
+    const cb = h("input", { type: "checkbox", value: s.id });
+    return h("div", { class: "scen" }, h("label", { class: "row" }, h("span", { style: "flex:0" }, cb), h("b", {}, s.title), h("span", { class: "muted small" }, `transport: ${s.agentTransport}`)),
+      h("div", {}, s.task), s.faults.length ? h("div", { class: "small" }, "Faults: ", s.faults.map((f) => JSON.stringify(f)).join("; ")) : null,
+      h("div", { class: "small muted" }, "Checks: ", s.checks.map((c) => `${c.id}${c.critical ? " (critical)" : ""}${c.informational ? " (informational)" : ""}${c.type === "claim_matches_external_state" ? " · judge" : ""}`).join(", ")),
+      s.degradedOutcome ? h("div", { class: "small" }, "Degraded policy: ", s.degradedOutcome.description) : null);
+  });
+  m.append(h("div", { class: "panel" }, h("div", {}, "Agent: ", h("b", {}, state.agentLabel)), ...boxes, h("label", {}, "Runs per scenario"), reps,
+    h("button", { class: "primary", onclick: async () => {
+      err.textContent = "";
+      if (!state.agent) { err.textContent = "Select an agent first (step 1)."; return; }
+      const ids = boxes.map((b) => b.querySelector("input")).filter((c) => c.checked).map((c) => c.value);
+      if (!ids.length) { err.textContent = "Select at least one scenario."; return; }
+      try { const r = await call("POST", "/api/runs", { agent: state.agent, scenarioIds: ids, repeats: Number(reps.value) }); state.lastRunIds = r.runIds; go("run", r.runIds[0]); }
+      catch (e) { err.textContent = e.message; }
+    } }, "Start run"), err));
+}
+
+// ---------------------------------------------------------------- run view
+async function viewRun(m, runId) {
+  const head = h("div"); const left = h("div", { class: "panel" }); const right = h("div", { class: "panel" }); const checks = h("div", { class: "panel" });
+  const others = state.lastRunIds.length > 1 ? h("div", { class: "panel small" }, "Runs in this batch: ", ...state.lastRunIds.map((id, i) => [h("a", { href: `/run/${id}`, onclick: (e) => { e.preventDefault(); go("run", id); } }, `#${i + 1}`), " "])) : null;
+  m.append(head, others || "", h("div", { class: "grid2" }, left, right), checks);
+  let stop = false; window.addEventListener("popstate", () => (stop = true), { once: true });
+  for (;;) {
+    let d; try { d = await call("GET", `/api/runs/${runId}`); } catch (e) { head.replaceChildren(h("p", { class: "err" }, e.message)); return; }
+    paint(d); if (d.status === "done" || stop || !location.pathname.endsWith(runId)) return;
+    await new Promise((r) => setTimeout(r, 600));
+  }
+  function paint(d) {
+    const r = d.record;
+    head.replaceChildren(r ? h("div", { class: `banner ${r.verdict}` }, `${r.verdict} — ${r.reason}`) : d.error ? h("div", { class: "banner ERROR" }, `ERROR — ${d.error}`) : h("div", { class: "banner running" }, "Running…"),
+      r ? h("p", { class: "small muted" }, `${r.scenarioId} · run ${r.runId} · ${r.agent.label} @ ${r.agent.version} · adapter ${r.adapter.name}/${r.adapter.version} · judge ${r.judge.name} (advisory) · execution ${r.executionStatus} · outcome ${r.outcome} · task completion ${r.taskCompletion}${d.replayed ? " · replayed from stored events (no side effects repeated)" : ""} · started ${r.startedAt}`) : "");
+    left.replaceChildren(h("h3", {}, "What the agent did"), h("div", { class: "small muted" }, r ? `Transport: ${r.adapter.transport}` : ""),
+      ...d.events.filter((e) => e.type !== "world_effect").map((e) =>
+        e.type === "tool_call" ? h("div", { class: "step call" }, `→ ${e.tool}(${JSON.stringify(e.args)})`) :
+        e.type === "tool_result" ? h("div", { class: `step ${e.ok ? "okr" : "bad"}` }, e.ok ? `← ok ${JSON.stringify(e.result).slice(0, 300)}` : `← error ${e.error}`) :
+        e.type === "message" ? h("div", { class: "step msg" }, h("div", { class: "small muted" }, "Final message (a claim, not proof)"), e.text) :
+        h("div", { class: "step bad" }, `${e.category}: ${e.reason}`)));
+    const effects = d.events.filter((e) => e.type === "world_effect");
+    right.replaceChildren(h("h3", {}, "What actually happened"),
+      r && !r.worldSnapshot ? h("p", { class: "muted" }, `World state not observable (black-box). Verifiers: ${r.verifiers.join(", ")}`) : "",
+      r && r.worldSnapshot ? h("div", {}, h("label", {}, "Cart"), h("pre", {}, JSON.stringify(r.worldSnapshot.cart, null, 1)), h("label", {}, "Orders"), h("pre", {}, JSON.stringify(r.worldSnapshot.orders, null, 1)), h("label", {}, "Outbox (synthetic)"), h("pre", {}, JSON.stringify(r.worldSnapshot.outbox.map((x) => ({ to: x.to, subject: x.subject })), null, 1))) : "",
+      h("label", {}, "World effects (journal)"), ...(effects.length ? effects.map((e) => h("div", { class: "step eff" }, `${e.kind} ${JSON.stringify(e.data)}`)) : [h("div", { class: "muted small" }, "none")]),
+      r && r.faultsFired.length ? h("p", { class: "small" }, "Faults fired: ", r.faultsFired.join("; ")) : "",
+      r && r.judgeAnswers ? h("div", {}, h("label", {}, `Judge (${r.judge.name}) — interpretations, not proof`), ...r.judgeAnswers.map((a) => h("div", { class: "small" }, `${a.name}: ${a.type === "predicate" ? `p=${a.probability}` : a.type === "score" ? `${a.label} (${a.score})` : a.type === "choice" ? `${a.choice} (${a.confidence})` : "refused"}`))) : "");
+    if (!r) return checks.replaceChildren();
+    const ev = Object.fromEntries(r.evidence.map((e) => [e.id, e]));
+    checks.replaceChildren(h("h3", {}, "Checks and evidence"), h("table", {}, h("tr", {}, h("th", {}, "Check"), h("th", {}, "Status"), h("th", {}, "Reason"), h("th", {}, "Evidence")),
+      r.checks.map((c) => h("tr", {}, h("td", {}, c.checkId, c.critical ? h("div", { class: "small muted" }, "critical") : "", c.informational ? h("div", { class: "small muted" }, "informational") : "", c.goal ? h("div", { class: "small muted" }, "goal") : ""), h("td", {}, badge(c.status.toUpperCase(), c.status)), h("td", {}, c.reason, h("div", { class: "small muted" }, `via ${c.verifier}`)),
+        h("td", {}, ...c.evidenceRefs.map((id) => h("details", {}, h("summary", { class: "small" }, id), h("pre", {}, JSON.stringify(ev[id], null, 1)))))))),
+      ...r.notes.map((n) => h("p", { class: "small" }, "Note: ", n)));
+  }
+}
+
+// ---------------------------------------------------------------- runs and gate
+async function viewRuns(m) {
+  const runs = await call("GET", "/api/runs");
+  m.append(h("div", { class: "panel" }, h("table", {}, h("tr", {}, h("th", {}, "Started"), h("th", {}, "Scenario"), h("th", {}, "Agent"), h("th", {}, "Verdict"), h("th", {}, "Reason")),
+    runs.map((r) => h("tr", {}, h("td", { class: "small" }, h("a", { href: `/run/${r.runId}`, onclick: (e) => { e.preventDefault(); go("run", r.runId); } }, r.startedAt)), h("td", {}, r.scenarioId), h("td", { class: "small" }, `${r.agent.label} @ ${r.agent.version}`), h("td", {}, badge(r.verdict)), h("td", { class: "small" }, r.reason))))));
+}
+function viewGate(m) {
+  const b = h("input", { value: "scripted-v1" }); const c = h("input", { value: "scripted-v2" }); const n = h("input", { type: "number", min: 1, value: 1 }); const out = h("div");
+  m.append(h("div", { class: "panel" }, h("p", { class: "muted" }, "Compares saved runs by agent version label. Counts are observed outcomes, not reliability guarantees."),
+    h("div", { class: "row" }, h("div", {}, h("label", {}, "Baseline version"), b), h("div", {}, h("label", {}, "Candidate version"), c), h("div", {}, h("label", {}, "Mandatory runs per scenario"), n)),
+    h("button", { class: "primary", onclick: async () => {
+      try {
+        const g = await call("POST", "/api/gate", { baseline: b.value, candidate: c.value, runsPerScenario: Number(n.value) });
+        const cls = g.decision === "READY TO RELEASE" ? "READY" : g.decision === "BLOCKED" ? "BLOCKED" : "REVIEW";
+        const fc = (x) => ["PASS", "FAIL", "ERROR", "INCONCLUSIVE"].filter((v) => x[v]).map((v) => `${x[v]}/${x.total} ${v}`).join(" · ") || "no runs";
+        out.replaceChildren(h("div", { class: `banner ${cls}` }, `${g.decision} — ${g.reason}`),
+          h("table", {}, h("tr", {}, h("th", {}, "Scenario"), h("th", {}, "Baseline"), h("th", {}, "Candidate"), h("th", {}, "Status"), h("th", {}, "Evidence")),
+            g.rows.map((r) => h("tr", {}, h("td", {}, r.scenarioId), h("td", {}, fc(r.baseline)), h("td", {}, fc(r.candidate)), h("td", {}, badge(r.status.toUpperCase(), r.status === "ok" ? "PASS" : r.status === "blocked" ? "FAIL" : "INCONCLUSIVE"), h("div", { class: "small" }, r.why)),
+              h("td", { class: "small" }, ...r.evidence.map((e) => h("div", {}, `${e.side}: `, h("a", { href: `/run/${e.runId}`, onclick: (ev) => { ev.preventDefault(); go("run", e.runId); } }, e.runId.slice(0, 8)), ` ${e.verdict}`)))))),
+          ...g.disclosures.map((d) => h("p", { class: "small muted" }, d)));
+      } catch (e) { out.replaceChildren(h("p", { class: "err" }, e.message)); }
+    } }, "Compute release gate"), out));
+}
+
+(async () => {
+  try { state.meta = await call("GET", "/api/meta"); } catch (e) { $("#main").append(h("p", { class: "err" }, e.message)); return; }
+  $("#meta").textContent = `Agents API: ${state.meta.agentsApi} · judge: ${state.meta.judge.name}${state.meta.privateUrlsAllowed ? " · LOCAL DEV: private agent URLs allowed" : ""}`;
+  paintChrome();
+  const route = () => { const r = /^\/run\/([0-9a-f-]{36})$/.exec(location.pathname); render(r ? "run" : location.pathname === "/connections" ? "connections" : location.pathname === "/design" ? "design" : "connect", r && r[1]); };
+  route();
+  window.addEventListener("popstate", route);
+})();
+</script>
+</body>
+</html>

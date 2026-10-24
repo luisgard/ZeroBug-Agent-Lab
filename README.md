@@ -45,7 +45,7 @@ External agent (two processes) and UI:
 ```bash
 (cd examples/external-agent && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt)
 npm run demo:external                                        # full E2E, writes data/e2e/<timestamp>/report.md
-ZB_ALLOW_PRIVATE_AGENT_URLS=1 npm run ui                     # http://127.0.0.1:3001 (local development only)
+npm run ui                                                   # http://127.0.0.1:3001 (4-step wizard; /advanced for all options)
 ```
 
 Full instructions for Windows, macOS and Linux: [`docs/EXTERNAL-AGENT-DEMO.md`](docs/EXTERNAL-AGENT-DEMO.md).

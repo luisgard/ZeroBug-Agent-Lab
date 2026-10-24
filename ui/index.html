@@ -1,439 +1,621 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ZeroBug Agent Labs</title>
+<title>ZeroBug</title>
 <style>
-  :root { --bg:#0e1116; --panel:#161b22; --line:#2b313a; --text:#e6edf3; --muted:#8b949e; --pass:#2ea043; --fail:#f85149; --err:#d29922; --inc:#a371f7; --accent:#58a6ff; }
+  :root {
+    --bg: #F6F7FB; --card: #FFFFFF; --ink: #161A23; --muted: #5A6272; --line: #E3E6EE; --soft: #F1F3F9;
+    --brand: #4F46E5; --brand-ink: #FFFFFF; --brand-soft: #EEF0FF;
+    --ok: #157F3D; --ok-soft: #E7F6EC; --bad: #B42318; --bad-soft: #FDECEA; --warn: #8A5300; --warn-soft: #FFF4DB; --info: #4B2E91; --info-soft: #F1ECFC;
+    --radius: 14px; --shadow: 0 1px 2px rgba(16,24,40,.05), 0 4px 16px rgba(16,24,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0F1117; --card: #171A22; --ink: #ECEEF3; --muted: #A3AAB8; --line: #2A2F3B; --soft: #1E222C;
+      --brand: #8B85FF; --brand-ink: #0F1117; --brand-soft: #23264A;
+      --ok: #5BD08A; --ok-soft: #14301F; --bad: #FF8A80; --bad-soft: #3A1714; --warn: #F5C46B; --warn-soft: #3A2C0E; --info: #C3B1FF; --info-soft: #2A2245;
+      --shadow: none;
+    }
+  }
   * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui, -apple-system, Segoe UI, sans-serif; }
-  header { padding:16px 24px; border-bottom:1px solid var(--line); display:flex; gap:24px; align-items:baseline; flex-wrap:wrap; }
-  header h1 { margin:0; font-size:20px; } header .tag { color:var(--muted); }
-  nav { display:flex; gap:4px; padding:8px 24px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
-  nav button, .tabs button { background:none; border:1px solid transparent; color:var(--muted); padding:6px 12px; border-radius:6px; cursor:pointer; font:inherit; }
-  nav button.on, .tabs button.on { color:var(--text); border-color:var(--line); background:var(--panel); }
-  main { padding:20px 24px; max-width:1300px; margin:0 auto; }
-  .panel { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:16px; }
-  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; } @media (max-width:900px){ .grid2{grid-template-columns:1fr;} }
-  input, textarea, select { width:100%; background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:8px; font:inherit; }
-  label { display:block; color:var(--muted); font-size:13px; margin:10px 0 4px; }
-  button.primary { background:var(--accent); color:#04111f; border:0; padding:8px 14px; border-radius:6px; font-weight:600; cursor:pointer; margin-top:12px; }
-  button.primary:disabled { opacity:.4; cursor:not-allowed; }
-  table { width:100%; border-collapse:collapse; font-size:14px; } td, th { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
-  th { color:var(--muted); font-weight:500; }
-  .badge { display:inline-block; padding:1px 8px; border-radius:10px; font-size:12px; font-weight:700; }
-  .PASS,.pass,.VERIFIED,.READY{ background:#12351d; color:var(--pass);} .FAIL,.fail,.BLOCKED{ background:#3d1517; color:var(--fail);} .ERROR,.error{ background:#3a2c0b; color:var(--err);} .INCONCLUSIVE,.inconclusive,.unsupported,.UNSUPPORTED,.REVIEW{ background:#2a1f45; color:var(--inc);} .DECLARED{ background:#1c2a3d; color:var(--accent);} .running{background:#1c2a3d;color:var(--accent);}
-  .banner { font-size:22px; font-weight:800; padding:14px 16px; border-radius:8px; margin-bottom:16px; }
-  .muted { color:var(--muted); } .small { font-size:13px; } .err { color:var(--fail); }
-  .step { border-left:3px solid var(--line); padding:4px 10px; margin:6px 0; font-family: ui-monospace, monospace; font-size:13px; white-space:pre-wrap; word-break:break-word; }
-  .step.call{border-color:var(--accent);} .step.okr{border-color:var(--pass);} .step.bad{border-color:var(--fail);} .step.msg{border-color:var(--inc); font-family:inherit; font-size:14px;} .step.eff{border-color:var(--err);}
-  pre { white-space:pre-wrap; word-break:break-word; font-size:12px; background:var(--bg); padding:8px; border-radius:6px; max-height:300px; overflow:auto; }
-  .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; } .row > * { flex:1; min-width:160px; }
-  .scen { border:1px solid var(--line); border-radius:8px; padding:10px; margin:8px 0; } .scen input{ width:auto; margin-right:8px; }
-  a { color:var(--accent); }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  a { color: var(--brand); }
+  .top { display: flex; align-items: center; gap: 16px; padding: 16px 24px; flex-wrap: wrap; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 20px; letter-spacing: -.01em; }
+  .logo-mark { width: 32px; height: 32px; border-radius: 9px; background: var(--brand); color: var(--brand-ink); display: grid; place-items: center; font-size: 16px; }
+  .tag { color: var(--muted); font-size: 14px; }
+  .top-links { margin-left: auto; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .ghost { background: none; border: 1px solid transparent; color: var(--muted); padding: 8px 12px; border-radius: 10px; cursor: pointer; font: inherit; font-size: 14px; min-height: 40px; text-decoration: none; }
+  .ghost:hover { background: var(--soft); color: var(--ink); }
+  .lang { display: flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .lang button { border: 0; background: none; padding: 8px 12px; font: inherit; font-size: 13px; font-weight: 700; color: var(--muted); cursor: pointer; min-height: 40px; min-width: 44px; }
+  .lang button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+  main { max-width: 860px; margin: 0 auto; padding: 8px 16px 64px; }
+  .steps { display: flex; gap: 8px; margin: 8px 0 24px; list-style: none; padding: 0; }
+  .steps li { flex: 1; }
+  .steps button { width: 100%; display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 8px 4px; font: inherit; color: var(--muted); cursor: pointer; text-align: left; border-bottom: 3px solid var(--line); min-height: 48px; }
+  .steps button:disabled { cursor: default; }
+  .steps .n { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; font-weight: 700; background: var(--soft); flex: none; }
+  .steps .cur button { color: var(--ink); border-color: var(--brand); font-weight: 600; }
+  .steps .cur .n { background: var(--brand); color: var(--brand-ink); }
+  .steps .done .n { background: var(--ok-soft); color: var(--ok); }
+  .steps .label { font-size: 14px; }
+  @media (max-width: 640px) { .steps .label { display: none; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); margin-bottom: 16px; }
+  h1 { font-size: 28px; line-height: 1.2; margin: 0 0 6px; letter-spacing: -.02em; }
+  h2 { font-size: 18px; margin: 0 0 8px; }
+  .lead { color: var(--muted); margin: 0 0 20px; }
+  .choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 20px; }
+  @media (max-width: 640px) { .choices { grid-template-columns: 1fr; } }
+  .choice { text-align: left; background: var(--card); border: 2px solid var(--line); border-radius: var(--radius); padding: 18px; cursor: pointer; font: inherit; color: var(--ink); display: flex; gap: 14px; align-items: flex-start; }
+  .choice[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-soft); }
+  .choice .ic { width: 40px; height: 40px; border-radius: 10px; background: var(--soft); display: grid; place-items: center; flex: none; color: var(--brand); }
+  .choice b { display: block; margin-bottom: 2px; }
+  .choice span { color: var(--muted); font-size: 14px; }
+  label { display: block; font-weight: 600; font-size: 14px; margin: 14px 0 6px; }
+  .hint { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  input, textarea, select { width: 100%; font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--brand); outline-offset: 1px; border-color: transparent; }
+  textarea { resize: vertical; }
+  details { margin-top: 14px; }
+  summary { cursor: pointer; color: var(--muted); font-size: 14px; min-height: 32px; display: flex; align-items: center; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font: inherit; font-weight: 600; border-radius: 12px; padding: 12px 20px; min-height: 48px; cursor: pointer; border: 1px solid var(--line); background: var(--card); color: var(--ink); text-decoration: none; }
+  .btn.primary { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn.small { min-height: 40px; padding: 8px 14px; font-size: 14px; }
+  .actions { display: flex; gap: 10px; align-items: center; margin-top: 20px; flex-wrap: wrap; }
+  .actions .spacer { flex: 1; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .ok { background: var(--ok-soft); color: var(--ok); } .bad { background: var(--bad-soft); color: var(--bad); }
+  .warn { background: var(--warn-soft); color: var(--warn); } .info { background: var(--info-soft); color: var(--info); } .neutral { background: var(--soft); color: var(--muted); }
+  .notice { border-radius: 12px; padding: 14px 16px; font-size: 15px; margin-top: 16px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .chip { border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 8px 14px; font: inherit; font-size: 14px; cursor: pointer; min-height: 40px; }
+  .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .test { border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; margin-bottom: 12px; background: var(--card); }
+  .test.off { opacity: .6; }
+  .test-head { display: flex; gap: 14px; align-items: flex-start; }
+  .test-head .grow { flex: 1; min-width: 0; }
+  .test-title { font-weight: 700; font-size: 17px; margin: 0 0 6px; }
+  .switch { position: relative; width: 48px; height: 28px; flex: none; margin-top: 2px; }
+  .switch input { opacity: 0; width: 48px; height: 28px; position: absolute; margin: 0; cursor: pointer; }
+  .switch span { position: absolute; inset: 0; background: var(--line); border-radius: 999px; pointer-events: none; transition: background .15s; }
+  .switch span::after { content: ""; position: absolute; width: 22px; height: 22px; top: 3px; left: 3px; background: #fff; border-radius: 50%; transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+  .switch input:checked + span { background: var(--brand); }
+  .switch input:checked + span::after { transform: translateX(20px); }
+  .switch input:focus-visible + span { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .switch input:disabled + span { opacity: .5; }
+  ul.clean { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 6px; }
+  ul.clean li { display: flex; gap: 8px; align-items: flex-start; font-size: 15px; }
+  .mark { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 800; flex: none; margin-top: 1px; }
+  .big { font-size: 40px; font-weight: 800; letter-spacing: -.02em; line-height: 1; }
+  .bar { height: 10px; background: var(--soft); border-radius: 999px; overflow: hidden; display: flex; }
+  .bar span { display: block; height: 100%; }
+  .runs { display: flex; flex-direction: column; gap: 8px; }
+  .run { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); cursor: pointer; font: inherit; color: var(--ink); text-align: left; width: 100%; min-height: 56px; }
+  .run:hover { border-color: var(--brand); }
+  .run .grow { flex: 1; min-width: 0; }
+  .run .sub { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  @media (max-width: 720px) { .cols { grid-template-columns: 1fr; } }
+  .bubble { background: var(--soft); border-radius: 12px; padding: 12px 14px; white-space: pre-wrap; word-break: break-word; font-size: 15px; }
+  .muted { color: var(--muted); } .small { font-size: 13px; }
+  .spinner { width: 18px; height: 18px; border: 3px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  dialog { border: 0; border-radius: var(--radius); padding: 0; max-width: 560px; width: calc(100% - 32px); background: var(--card); color: var(--ink); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+  dialog::backdrop { background: rgba(15,17,23,.45); }
+  .dialog-body { padding: 24px; }
+  pre { white-space: pre-wrap; word-break: break-word; font-size: 12px; background: var(--soft); padding: 10px; border-radius: 8px; max-height: 240px; overflow: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td, th { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 </style>
 </head>
 <body>
-<header><h1>ZeroBug Agent Labs</h1><span class="tag" id="tagline">Agents report. ZeroBug proves.</span><span id="meta" class="muted small"></span><span id="lang" role="group" aria-label="Language" style="display:flex;gap:4px;margin-left:auto"></span></header>
-<nav id="nav"></nav>
+<div class="top">
+  <div class="logo"><span class="logo-mark" aria-hidden="true">Z</span> ZeroBug</div>
+  <span class="tag" id="tagline"></span>
+  <nav class="top-links" aria-label="Main">
+    <button class="ghost" id="nav-new" type="button"></button>
+    <button class="ghost" id="nav-conn" type="button"></button>
+    <button class="ghost" id="nav-hist" type="button"></button>
+    <a class="ghost" id="nav-adv" href="/advanced"></a>
+    <div class="lang" role="group" aria-label="Language"><button type="button" id="lang-es">ES</button><button type="button" id="lang-en">EN</button></div>
+  </nav>
+</div>
 <main id="main"></main>
+<dialog id="dlg"><div class="dialog-body" id="dlg-body"></div></dialog>
+
 <script>
-const $ = (sel) => document.querySelector(sel);
+// ---------------------------------------------------------------- helpers (all text goes through textContent: agent output is untrusted)
+const $ = (s) => document.querySelector(s);
 function h(tag, attrs = {}, ...kids) {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === false || v == null) continue;
     if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
     else if (k === "class") el.className = v;
-    else if (v !== false && v != null) el.setAttribute(k, v === true ? "" : v);
+    else el.setAttribute(k, v === true ? "" : v);
   }
-  for (const c of kids.flat()) if (c != null && c !== false) el.append(c instanceof Node ? c : document.createTextNode(String(c))); // text only: agent output is untrusted
+  for (const c of kids.flat()) if (c != null && c !== false && c !== "") el.append(c instanceof Node ? c : document.createTextNode(String(c)));
   return el;
 }
-const badge = (t, cls = t) => h("span", { class: `badge ${cls}` }, t);
+const svg = (path) => { const s = document.createElementNS("http://www.w3.org/2000/svg", "svg"); s.setAttribute("width", "22"); s.setAttribute("height", "22"); s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("fill", "none"); s.setAttribute("stroke", "currentColor"); s.setAttribute("stroke-width", "2"); s.setAttribute("stroke-linecap", "round"); s.setAttribute("stroke-linejoin", "round"); s.setAttribute("aria-hidden", "true"); s.innerHTML = path; return s; };
+const ICON = {
+  chat: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  code: '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>',
+  mail: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>',
+  plug: '<path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0zM12 18v4"/>',
+};
 async function call(method, path, body) {
   const res = await fetch(path, { method, headers: { "content-type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
   const data = await res.json().catch(() => ({ error: "Bad response" }));
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
   return data;
 }
-const state = { meta: null, agent: null, agentLabel: "none selected", scenarios: [], connectTab: "samples", lastRunIds: [] };
-const views = { connect: viewConnect, connections: viewConnections, design: viewDesign, scenarios: viewScenarios, runs: viewRuns, gate: viewGate };
-// ---------------------------------------------------------------- i18n (ES / EN)
-const I18N = {
-  en: {
-    tagline: "Agents report. ZeroBug proves.", nav_connect: "1 · Connect agent", nav_connections: "2 · Connections", nav_design: "3 · Design tests", nav_scenarios: "4 · Built-in scenarios", nav_runs: "5 · Runs", nav_gate: "6 · Release gate",
-    d_title: "Design tests for your agent", d_sub: "Tell ZeroBug what your agent does. It proposes tests, says which connections it needs, and only runs what can be verified.",
-    d_agent: "Agent", d_noagent: "No agent selected yet: pick one in step 1.", d_desc: "What does your agent do?", d_desc_ph: "e.g. It applies to jobs on LinkedIn for me and emails me a summary.",
-    d_spec: "Anything specific you want us to test? (optional)", d_spec_ph: "e.g. It must never apply twice to the same job.", d_propose: "Propose tests", d_proposing: "Designing tests…",
-    d_planner: "Planner", d_caps: "Detected", d_none: "none", d_include: "Include", d_task: "Task sent to the agent", d_criteria: "What must actually happen", d_needs: "Needs", d_connect_link: "Connect",
-    d_limits: "Limitations", d_approve: "I approve real-world effects for this test", d_repeats: "Runs", d_unsupported: "What ZeroBug cannot verify (yet)", d_run: "Run selected tests",
-    d_risk: "Risk", d_src_AUTO: "Proposed by ZeroBug", d_src_USER: "From your request", d_src_HYBRID: "ZeroBug + your request",
-    r_READY: "READY", r_NEEDS_ACCESS: "NEEDS ACCESS", r_NEEDS_REVIEW: "NEEDS REVIEW", r_UNSUPPORTED: "UNSUPPORTED",
-    c_title: "Connections", c_sub: "Connect the apps where your agent leaves a trace. ZeroBug only READS through these connections: it never sends, applies, buys or deletes anything.",
-    c_yours: "Your connections", c_none: "No connections yet. Add one from the catalog below.", c_use: "Use in scenarios as", c_test: "Test", c_delete: "Delete", c_checked: "checked",
-    c_file: "Configured by the operator (zerobug.sources.json)", c_catalog: "Catalog", c_soon: "Coming soon", c_connect: "Connect", c_google: "Sign in with Google",
-    c_google_off: "Google sign-in is not configured on this server. Ask the operator to set ZB_GOOGLE_CLIENT_ID and ZB_GOOGLE_CLIENT_SECRET, or connect with an existing token:",
-    c_manual: "Connect with an existing token", c_via_gmail: "Works through your Gmail connection.", c_has_gmail: "✓ Ready (Gmail connected)", c_need_gmail: "Connect Gmail first",
-    c_custom: "Build your own connector", c_custom_sub: "Your system isn't listed? Tell ZeroBug where to look. Read-only, tested before use.",
-    c_save: "Save and test", c_cancel: "Cancel", c_saving: "Testing access…", c_saved: "Connected and tested", c_saved_bad: "Saved, but the test failed",
-    f_name: "Name", f_key: "Stripe TEST key (rk_test_… or sk_test_…)", f_kind: "What it returns", f_url: "URL (must contain {ref})", f_items: "Where the list is (e.g. data.items)",
-    f_fields: "Field mapping", f_hname: "Auth header name (optional)", f_hval: "Auth header value (stored encrypted)", f_health: "Health-check URL (optional, proves access)",
-    f_mcpurl: "MCP server URL", f_auth: "Authorization header (stored encrypted)", f_tool: "Read-only tool to call", f_args: "Tool arguments (JSON; {ref} is replaced)",
-    f_parse: "Result format", f_fieldsjson: "Field mapping (JSON)", f_cid: "OAuth client ID", f_csecret: "OAuth client secret", f_rtoken: "Refresh token (gmail.readonly)",
-    k_email: "Emails", k_order: "Orders", k_payment: "Payments", cat_all: "All", cat_email: "Email", cat_jobs: "Jobs", cat_stores: "Stores", cat_payments: "Payments", cat_messaging: "Messaging", cat_calendar: "Calendar", cat_advanced: "Advanced",
-    name_http_json: "Your own API", name_mcp_http: "MCP server", name_activepieces: "Activepieces catalog", name_test_inbox: "Test inbox service",
-    verified: "VERIFIED", unavailable: "UNAVAILABLE", confirm_delete: "Delete this connection? Scenarios that use it will become INCONCLUSIVE.", flash_ok: "Connected:", flash_err: "Could not connect:",
-  },
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("zb:" + k); return v ? JSON.parse(v) : d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("zb:" + k, JSON.stringify(v)); } catch {} },
+};
+
+// ---------------------------------------------------------------- i18n
+const T = {
   es: {
-    tagline: "Los agentes dicen. ZeroBug comprueba.", nav_connect: "1 · Conectar agente", nav_connections: "2 · Conexiones", nav_design: "3 · Diseñar pruebas", nav_scenarios: "4 · Escenarios incluidos", nav_runs: "5 · Corridas", nav_gate: "6 · Release gate",
-    d_title: "Diseña pruebas para tu agente", d_sub: "Cuéntale a ZeroBug qué hace tu agente. Propone pruebas, te dice qué conexiones necesita y solo corre lo que se puede verificar.",
-    d_agent: "Agente", d_noagent: "Aún no eliges agente: selecciónalo en el paso 1.", d_desc: "¿Qué hace tu agente?", d_desc_ph: "ej. Se postula a vacantes en LinkedIn por mí y me manda un resumen por correo.",
-    d_spec: "¿Algo específico que quieras comprobar? (opcional)", d_spec_ph: "ej. Nunca debe postularse dos veces a la misma vacante.", d_propose: "Proponer pruebas", d_proposing: "Diseñando pruebas…",
-    d_planner: "Planificador", d_caps: "Detectado", d_none: "nada", d_include: "Incluir", d_task: "Tarea que se le manda al agente", d_criteria: "Qué tiene que pasar de verdad", d_needs: "Necesita", d_connect_link: "Conectar",
-    d_limits: "Limitaciones", d_approve: "Apruebo efectos reales para esta prueba", d_repeats: "Corridas", d_unsupported: "Lo que ZeroBug no puede verificar (todavía)", d_run: "Correr pruebas seleccionadas",
-    d_risk: "Riesgo", d_src_AUTO: "Propuesta por ZeroBug", d_src_USER: "De tu solicitud", d_src_HYBRID: "ZeroBug + tu solicitud",
-    r_READY: "LISTA", r_NEEDS_ACCESS: "FALTA ACCESO", r_NEEDS_REVIEW: "REVISAR", r_UNSUPPORTED: "NO SOPORTADA",
-    c_title: "Conexiones", c_sub: "Conecta las apps donde tu agente deja huella. ZeroBug solo LEE con estas conexiones: nunca envía, postula, compra ni borra nada.",
-    c_yours: "Tus conexiones", c_none: "Aún no hay conexiones. Agrega una del catálogo de abajo.", c_use: "Úsala en escenarios como", c_test: "Probar", c_delete: "Eliminar", c_checked: "revisada",
-    c_file: "Configurada por el operador (zerobug.sources.json)", c_catalog: "Catálogo", c_soon: "Próximamente", c_connect: "Conectar", c_google: "Entrar con Google",
-    c_google_off: "El inicio de sesión con Google no está configurado en este servidor. Pide al operador ZB_GOOGLE_CLIENT_ID y ZB_GOOGLE_CLIENT_SECRET, o conecta con un token existente:",
-    c_manual: "Conectar con un token existente", c_via_gmail: "Funciona con tu conexión de Gmail.", c_has_gmail: "✓ Listo (Gmail conectado)", c_need_gmail: "Conecta Gmail primero",
-    c_custom: "Crear conector propio", c_custom_sub: "¿Tu sistema no está? Dile a ZeroBug dónde mirar. Solo lectura y se prueba antes de usarse.",
-    c_save: "Guardar y probar", c_cancel: "Cancelar", c_saving: "Probando acceso…", c_saved: "Conectado y probado", c_saved_bad: "Guardado, pero la prueba falló",
-    f_name: "Nombre", f_key: "Llave de PRUEBA de Stripe (rk_test_… o sk_test_…)", f_kind: "Qué devuelve", f_url: "URL (debe contener {ref})", f_items: "Dónde está la lista (ej. data.items)",
-    f_fields: "Mapeo de campos", f_hname: "Nombre del encabezado de acceso (opcional)", f_hval: "Valor del encabezado (se guarda cifrado)", f_health: "URL para probar acceso (opcional)",
-    f_mcpurl: "URL del servidor MCP", f_auth: "Encabezado Authorization (se guarda cifrado)", f_tool: "Herramienta de lectura a usar", f_args: "Argumentos (JSON; {ref} se reemplaza)",
-    f_parse: "Formato del resultado", f_fieldsjson: "Mapeo de campos (JSON)", f_cid: "Client ID de OAuth", f_csecret: "Client secret de OAuth", f_rtoken: "Refresh token (gmail.readonly)",
-    k_email: "Correos", k_order: "Pedidos", k_payment: "Pagos", cat_all: "Todas", cat_email: "Correo", cat_jobs: "Empleo", cat_stores: "Tiendas", cat_payments: "Pagos", cat_messaging: "Mensajería", cat_calendar: "Calendario", cat_advanced: "Avanzado",
-    name_http_json: "Tu propia API", name_mcp_http: "Servidor MCP", name_activepieces: "Catálogo Activepieces", name_test_inbox: "Servicio de buzón de pruebas", name_stripe_test: "Stripe (modo prueba)",
-    verified: "VERIFICADA", unavailable: "NO DISPONIBLE", confirm_delete: "¿Eliminar esta conexión? Los escenarios que la usen quedarán INCONCLUSIVE.", flash_ok: "Conectado:", flash_err: "No se pudo conectar:",
+    tagline: "Los agentes dicen. ZeroBug comprueba.", nav_new: "Nueva prueba", nav_conn: "Conexiones", nav_hist: "Historial", nav_adv: "Avanzado",
+    s1: "Tu agente", s2: "Qué hace", s3: "Pruebas", s4: "Resultados",
+    a_title: "¿Dónde vive tu agente?", a_lead: "No necesitamos su código. Solo cómo hablarle.",
+    a_web: "Una página con chat", a_web_d: "Escribes en una caja de texto y responde.", a_api: "Una API", a_api_d: "Recibe un mensaje por HTTP y responde texto.",
+    a_url_web: "Dirección de la página del chat", a_url_api: "Dirección de la API",
+    a_name: "Nombre de esta versión (opcional)", a_name_h: "Para comparar después, por ejemplo “v1” y “v2”.",
+    a_adv: "Opciones avanzadas", a_in: "Campo del mensaje", a_out: "Campo de la respuesta", a_corr: "Campo de conversación (opcional)",
+    a_sel_in: "Caja de texto (selector CSS, opcional)", a_sel_send: "Botón de enviar (opcional)", a_sel_out: "Burbuja de respuesta (opcional)", a_sel_h: "Si los dejas vacíos, ZeroBug los detecta solo.",
+    a_try: "Conectar y probar", a_trying: "Saludando a tu agente…", a_ok: "Tu agente respondió", a_in_s: "en", a_fail: "No pudimos hablar con tu agente", a_sample: "Usar el agente de ejemplo",
+    next: "Siguiente", back: "Atrás",
+    d_title: "¿Qué hace tu agente?", d_lead: "Cuéntalo como se lo explicarías a una persona. ZeroBug propone las pruebas.",
+    d_desc_ph: "Ej. Envía correos por mí a quien yo le diga.", d_examples: "Ejemplos:",
+    d_ex1: "Envía correos por mí", d_ex2: "Se postula a vacantes en LinkedIn por mí", d_ex3: "Compra productos en una tienda en línea",
+    d_spec: "¿Algo específico que quieras comprobar? (opcional)", d_spec_ph: "Ej. Que el correo llegue solo una vez.",
+    d_go: "Proponer pruebas", d_going: "Diseñando tus pruebas…",
+    p_title: "Te proponemos {n} pruebas", p_title1: "Te proponemos 1 prueba", p_title0: "No encontramos qué probar",
+    p_lead: "Activa las que quieras. Solo corren las que ZeroBug puede comprobar de verdad.",
+    p_rules: "Diseñadas con reglas básicas. Con una clave de OpenAI, la IA diseña pruebas más completas.", p_ai: "Diseñadas con IA (OpenAI Agents API) y revisadas con reglas.",
+    p_ready: "Lista", p_access: "Falta conectar {x}", p_review: "Revisa antes de correr", p_unsupported: "No soportada",
+    p_details: "Ver detalles", p_task: "Lo que le pediremos a tu agente", p_checks: "Lo que vamos a comprobar", p_limits: "A tener en cuenta",
+    p_connect: "Conectar {x}", p_approve: "Entiendo que esta prueba hace acciones reales y la apruebo",
+    p_times: "¿Cuántas veces quieres probar cada una?", p_custom: "Otro", p_run: "Correr {n} pruebas", p_run1: "Correr 1 prueba",
+    p_cant: "Esto todavía no lo puedo comprobar", p_none_on: "Activa al menos una prueba.",
+    k_email: "tu correo", k_order: "tu tienda", k_payment: "tus pagos",
+    r_title: "Resultados", r_running: "Corriendo {a} de {b}…", r_wait: "Algunas comprobaciones esperan hasta 2 minutos: el correo puede tardar en llegar, y para descartar duplicados hay que esperar a que no llegue otro.", r_done: "Terminado",
+    r_summary_ok: "{a} de {b} comprobadas", r_failed: "{n} fallaron", r_failed1: "1 falló", r_unsure: "{n} sin confirmar", r_err: "{n} con error",
+    v_PASS: "Comprobado", v_FAIL: "Falló", v_INCONCLUSIVE: "Sin confirmar", v_ERROR: "Error", v_running: "Corriendo…",
+    why_PASS: "tu agente lo hizo y encontramos la prueba.", why_FAIL: "lo que pasó no coincide con lo que se pidió o con lo que dijo tu agente.", why_INCONCLUSIVE: "no encontramos pruebas suficientes para decidir.", why_ERROR: "algo falló al correr la prueba (no es culpa de tu agente).",
+    ck_email_ok: "El correo sí llegó", ck_email_bad: "El correo no llegó como se esperaba", ck_email_na: "No pudimos revisar el correo",
+    ck_order_ok: "El pedido sí existe", ck_order_bad: "El pedido no existe como se esperaba", ck_order_na: "No pudimos revisar la tienda",
+    ck_payment_ok: "El cobro sí existe", ck_payment_bad: "El cobro no existe como se esperaba", ck_payment_na: "No pudimos revisar los pagos",
+    ck_claim_ok: "Lo que dijo tu agente es cierto", ck_claim_bad: "Tu agente dijo algo que no pasó", ck_claim_na: "No pudimos confirmar lo que dijo tu agente",
+    r_said: "Lo que dijo tu agente", r_proved: "Lo que comprobamos", r_nomsg: "(no respondió nada)", r_evidence: "Ver evidencia técnica",
+    r_again: "Correr otra vez", r_new: "Probar otra cosa", r_close: "Cerrar", r_run_of: "Corrida", r_open: "Ver detalle",
+    c_title: "Conexiones", c_lead: "Las apps donde tu agente deja huella. ZeroBug solo las lee: nunca envía, compra ni borra nada.",
+    c_none: "Aún no tienes conexiones.", c_add: "Agregar conexión", c_test: "Probar", c_del: "Eliminar", c_ok: "Funciona", c_bad: "No funciona",
+    c_pick: "¿Qué quieres conectar?", c_gmail: "Gmail", c_gmail_d: "Para comprobar que llegan correos. Solo lectura.",
+    c_inbox: "Un buzón con API", c_inbox_d: "Un buzón de pruebas que se consulta por internet.", c_stripe: "Stripe (modo prueba)", c_stripe_d: "Para comprobar cobros de prueba.",
+    c_other: "Otro sistema", c_other_d: "Tu propia API o un conector MCP (en Avanzado).",
+    c_google: "Entrar con Google", c_google_off: "El inicio con Google no está configurado en este equipo. Puedes pegar un token existente:",
+    c_cid: "Client ID", c_secret: "Client secret", c_rtoken: "Refresh token (gmail.readonly)",
+    c_url: "Dirección del buzón (debe incluir {ref})", c_token: "Token de lectura", c_list: "Dónde está la lista de correos", c_key: "Llave de prueba (rk_test_…)",
+    c_name: "Nombre", c_save: "Conectar", c_saving: "Probando la conexión…", c_cancel: "Cancelar", c_confirm: "¿Eliminar esta conexión?",
+    h_title: "Historial", h_empty: "Aún no hay corridas.", h_when: "Cuándo", h_test: "Prueba", h_agent: "Agente", h_res: "Resultado",
+    err_url: "Escribe una dirección que empiece con http:// o https://", err_desc: "Describe en una frase qué hace tu agente.",
+  },
+  en: {
+    tagline: "Agents report. ZeroBug proves.", nav_new: "New test", nav_conn: "Connections", nav_hist: "History", nav_adv: "Advanced",
+    s1: "Your agent", s2: "What it does", s3: "Tests", s4: "Results",
+    a_title: "Where does your agent live?", a_lead: "We don't need its code. Just how to talk to it.",
+    a_web: "A chat page", a_web_d: "You type in a text box and it answers.", a_api: "An API", a_api_d: "It receives a message over HTTP and replies with text.",
+    a_url_web: "Chat page address", a_url_api: "API address",
+    a_name: "Name of this version (optional)", a_name_h: "To compare later, e.g. “v1” and “v2”.",
+    a_adv: "Advanced options", a_in: "Message field", a_out: "Reply field", a_corr: "Conversation field (optional)",
+    a_sel_in: "Text box (CSS selector, optional)", a_sel_send: "Send button (optional)", a_sel_out: "Reply bubble (optional)", a_sel_h: "Leave them empty and ZeroBug finds them.",
+    a_try: "Connect and test", a_trying: "Saying hi to your agent…", a_ok: "Your agent replied", a_in_s: "in", a_fail: "We couldn't talk to your agent", a_sample: "Use the sample agent",
+    next: "Next", back: "Back",
+    d_title: "What does your agent do?", d_lead: "Describe it as you would to a person. ZeroBug proposes the tests.",
+    d_desc_ph: "E.g. It sends emails for me to whoever I say.", d_examples: "Examples:",
+    d_ex1: "Sends emails for me", d_ex2: "Applies to jobs on LinkedIn for me", d_ex3: "Buys products in an online store",
+    d_spec: "Anything specific you want to check? (optional)", d_spec_ph: "E.g. The email must arrive only once.",
+    d_go: "Propose tests", d_going: "Designing your tests…",
+    p_title: "We propose {n} tests", p_title1: "We propose 1 test", p_title0: "We couldn't find what to test",
+    p_lead: "Turn on the ones you want. Only tests ZeroBug can really verify will run.",
+    p_rules: "Designed with basic rules. With an OpenAI key, AI designs more complete tests.", p_ai: "Designed with AI (OpenAI Agents API) and checked with rules.",
+    p_ready: "Ready", p_access: "Connect {x} first", p_review: "Review before running", p_unsupported: "Not supported",
+    p_details: "See details", p_task: "What we'll ask your agent", p_checks: "What we'll verify", p_limits: "Keep in mind",
+    p_connect: "Connect {x}", p_approve: "I understand this test takes real actions and I approve it",
+    p_times: "How many times should each one run?", p_custom: "Other", p_run: "Run {n} tests", p_run1: "Run 1 test",
+    p_cant: "What I can't verify yet", p_none_on: "Turn on at least one test.",
+    k_email: "your email", k_order: "your store", k_payment: "your payments",
+    r_title: "Results", r_running: "Running {a} of {b}…", r_wait: "Some checks wait up to 2 minutes: an email can take time to arrive, and ruling out duplicates means waiting to see that no second one shows up.", r_done: "Done",
+    r_summary_ok: "{a} of {b} proven", r_failed: "{n} failed", r_failed1: "1 failed", r_unsure: "{n} unconfirmed", r_err: "{n} errored",
+    v_PASS: "Proven", v_FAIL: "Failed", v_INCONCLUSIVE: "Unconfirmed", v_ERROR: "Error", v_running: "Running…",
+    why_PASS: "your agent did it and we found the proof.", why_FAIL: "what happened doesn't match what was asked or what your agent said.", why_INCONCLUSIVE: "we didn't find enough proof to decide.", why_ERROR: "something broke while running the test (not your agent's fault).",
+    ck_email_ok: "The email really arrived", ck_email_bad: "The email didn't arrive as expected", ck_email_na: "We couldn't check the inbox",
+    ck_order_ok: "The order really exists", ck_order_bad: "The order doesn't exist as expected", ck_order_na: "We couldn't check the store",
+    ck_payment_ok: "The charge really exists", ck_payment_bad: "The charge doesn't exist as expected", ck_payment_na: "We couldn't check payments",
+    ck_claim_ok: "What your agent said is true", ck_claim_bad: "Your agent said something that didn't happen", ck_claim_na: "We couldn't confirm what your agent said",
+    r_said: "What your agent said", r_proved: "What we verified", r_nomsg: "(no reply)", r_evidence: "See technical evidence",
+    r_again: "Run again", r_new: "Test something else", r_close: "Close", r_run_of: "Run", r_open: "Open details",
+    c_title: "Connections", c_lead: "The apps where your agent leaves a trace. ZeroBug only reads them: it never sends, buys or deletes anything.",
+    c_none: "No connections yet.", c_add: "Add connection", c_test: "Test", c_del: "Delete", c_ok: "Working", c_bad: "Not working",
+    c_pick: "What do you want to connect?", c_gmail: "Gmail", c_gmail_d: "To verify that emails arrive. Read-only.",
+    c_inbox: "An inbox with an API", c_inbox_d: "A test inbox you can query over the internet.", c_stripe: "Stripe (test mode)", c_stripe_d: "To verify test charges.",
+    c_other: "Another system", c_other_d: "Your own API or an MCP connector (in Advanced).",
+    c_google: "Sign in with Google", c_google_off: "Google sign-in isn't set up on this computer. You can paste an existing token:",
+    c_cid: "Client ID", c_secret: "Client secret", c_rtoken: "Refresh token (gmail.readonly)",
+    c_url: "Inbox address (must include {ref})", c_token: "Read token", c_list: "Where the list of emails is", c_key: "Test key (rk_test_…)",
+    c_name: "Name", c_save: "Connect", c_saving: "Testing the connection…", c_cancel: "Cancel", c_confirm: "Delete this connection?",
+    h_title: "History", h_empty: "No runs yet.", h_when: "When", h_test: "Test", h_agent: "Agent", h_res: "Result",
+    err_url: "Enter an address starting with http:// or https://", err_desc: "Describe in one sentence what your agent does.",
   },
 };
-let lang = (() => { try { const saved = localStorage.getItem("zb-lang"); if (saved === "es" || saved === "en") return saved; } catch {} return (navigator.language || "en").toLowerCase().startsWith("es") ? "es" : "en"; })();
-const tr = (k) => (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k;
-function setLang(l) { lang = l; try { localStorage.setItem("zb-lang", l); } catch {} paintChrome(); render(state.view || "connect", state.viewArg); }
+let lang = store.get("lang", (navigator.language || "en").toLowerCase().startsWith("es") ? "es" : "en");
+const t = (k, vars = {}) => Object.entries(vars).reduce((s, [a, b]) => s.replace(`{${a}}`, b), (T[lang] && T[lang][k]) || T.en[k] || k);
+
+// ---------------------------------------------------------------- state
+const S = {
+  step: 1,
+  mode: store.get("mode", "web"),
+  url: store.get("url", ""),
+  version: store.get("version", ""),
+  adv: store.get("adv", { taskField: "message", responseField: "reply", correlationField: "conversation_id", inputSelector: "", sendSelector: "", replySelector: "" }),
+  smoke: null,
+  desc: store.get("desc", ""),
+  spec: store.get("spec", ""),
+  plan: null,
+  repeats: 3,
+  runIds: [],
+  view: "wizard",
+};
+function agentSpec() {
+  const label = `${S.url}${S.version ? " · " + S.version : ""}`;
+  const version = S.version || "unversioned";
+  if (S.mode === "web") return { kind: "browser_chat", url: S.url, ...(S.adv.inputSelector ? { inputSelector: S.adv.inputSelector } : {}), ...(S.adv.sendSelector ? { sendSelector: S.adv.sendSelector } : {}), ...(S.adv.replySelector ? { replySelector: S.adv.replySelector } : {}), label, version };
+  return { kind: "blackbox_http", endpoint: S.url, mapping: { taskField: S.adv.taskField || "message", responseField: S.adv.responseField || "reply", ...(S.adv.correlationField ? { correlationField: S.adv.correlationField } : {}) }, label, version };
+}
+function save() { store.set("mode", S.mode); store.set("url", S.url); store.set("version", S.version); store.set("adv", S.adv); store.set("desc", S.desc); store.set("spec", S.spec); }
+
+// ---------------------------------------------------------------- chrome
 function paintChrome() {
-  $("#tagline").textContent = tr("tagline");
-  const box = $("#lang"); box.replaceChildren();
-  for (const l of ["es", "en"]) box.append(h("button", { class: lang === l ? "on" : "", "aria-pressed": String(lang === l), onclick: () => setLang(l), style: "min-width:44px;min-height:36px;border:1px solid var(--line);border-radius:6px;background:" + (lang === l ? "var(--panel)" : "none") + ";color:var(--text);cursor:pointer" }, l.toUpperCase()));
+  document.documentElement.lang = lang;
+  $("#tagline").textContent = t("tagline");
+  $("#nav-new").textContent = t("nav_new"); $("#nav-conn").textContent = t("nav_conn"); $("#nav-hist").textContent = t("nav_hist"); $("#nav-adv").textContent = t("nav_adv");
+  $("#lang-es").setAttribute("aria-pressed", String(lang === "es")); $("#lang-en").setAttribute("aria-pressed", String(lang === "en"));
 }
-function nav(active) {
-  const n = $("#nav"); n.replaceChildren();
-  for (const k of ["connect", "connections", "design", "scenarios", "runs", "gate"])
-    n.append(h("button", { class: active === k ? "on" : "", onclick: () => go(k) }, tr("nav_" + k)));
+$("#lang-es").onclick = () => { lang = "es"; store.set("lang", lang); paintChrome(); render(); };
+$("#lang-en").onclick = () => { lang = "en"; store.set("lang", lang); paintChrome(); render(); };
+$("#nav-new").onclick = () => { S.view = "wizard"; S.step = S.step === 4 ? 1 : S.step; history.pushState({}, "", "/"); render(); };
+$("#nav-conn").onclick = () => { S.view = "connections"; history.pushState({}, "", "/connections"); render(); };
+$("#nav-hist").onclick = () => { S.view = "history"; history.pushState({}, "", "/"); render(); };
+
+function stepper() {
+  const can = { 1: true, 2: !!S.smoke?.ok, 3: !!S.plan, 4: S.runIds.length > 0 };
+  return h("ol", { class: "steps", "aria-label": "Steps" }, ...[1, 2, 3, 4].map((n) =>
+    h("li", { class: n === S.step ? "cur" : n < S.step ? "done" : "" },
+      h("button", { type: "button", disabled: !can[n] || n === S.step, "aria-current": n === S.step ? "step" : false, onclick: () => { S.step = n; render(); } },
+        h("span", { class: "n" }, n < S.step ? "✓" : String(n)), h("span", { class: "label" }, t("s" + n))))));
 }
-function go(view, arg) { history.pushState({}, "", view === "run" ? `/run/${arg}` : view === "connections" ? "/connections" : view === "design" ? "/design" : "/"); render(view, arg); }
-function render(view, arg) { state.view = view; state.viewArg = arg; nav(view); const m = $("#main"); m.replaceChildren(); (view === "run" ? viewRun : views[view])(m, arg); }
-
-// ---------------------------------------------------------------- connections
-async function viewConnections(m) {
-  const flash = h("div");
-  const q = new URLSearchParams(location.search);
-  if (q.get("connected")) flash.append(h("p", { class: "panel", style: "border-color:var(--pass)" }, badge("VERIFIED"), " ", tr("flash_ok"), " ", h("code", {}, q.get("connected"))));
-  if (q.get("error")) flash.append(h("p", { class: "panel err" }, tr("flash_err"), " ", q.get("error")));
-  const yours = h("div", { class: "panel" });
-  const catalogBox = h("div");
-  m.append(h("div", { class: "panel" }, h("h2", { style: "margin:0 0 6px" }, tr("c_title")), h("p", { class: "muted", style: "margin:0" }, tr("c_sub"))), flash, yours, catalogBox);
-
-  let data, cat;
-  try { [data, cat] = await Promise.all([call("GET", "/api/connections"), call("GET", "/api/connections/catalog")]); }
-  catch (e) { yours.replaceChildren(h("p", { class: "err" }, e.message)); return; }
-  const hasGmail = data.connections.some((c) => c.type === "gmail" && c.status.state === "VERIFIED");
-
-  // ---- your connections
-  const kinds = (p) => p.map((k) => tr("k_" + k)).join(", ");
-  const rows = data.connections.map((c) => {
-    const st = h("div", { class: "small" }, badge(c.status.state === "VERIFIED" ? tr("verified") : tr("unavailable"), c.status.state === "VERIFIED" ? "VERIFIED" : "FAIL"), " ", h("span", { class: "muted" }, `${c.status.detail} · ${tr("c_checked")} ${new Date(c.status.checkedAt).toLocaleString(lang)}`));
-    const testBtn = h("button", { class: "primary", style: "margin:0", onclick: async () => { testBtn.disabled = true; try { await call("POST", `/api/connections/${c.id}/test`); } catch (e) { alert(e.message); } render("connections"); } }, tr("c_test"));
-    const delBtn = h("button", { style: "min-height:36px;border:1px solid var(--line);border-radius:6px;background:none;color:var(--fail);cursor:pointer;padding:6px 12px", onclick: async () => { if (!confirm(tr("confirm_delete"))) return; await call("DELETE", `/api/connections/${c.id}`); render("connections"); } }, tr("c_delete"));
-    return h("tr", {}, h("td", {}, h("b", {}, c.name), h("div", { class: "small muted" }, kinds(c.provides))), h("td", { class: "small" }, tr("c_use"), " ", h("code", {}, `source: ${c.slug}`)), h("td", {}, st), h("td", {}, h("div", { style: "display:flex;gap:8px" }, testBtn, delBtn)));
-  });
-  const fileRows = data.fileSources.map((n) => h("tr", {}, h("td", {}, h("b", {}, n)), h("td", { class: "small" }, tr("c_use"), " ", h("code", {}, `source: ${n}`)), h("td", { class: "small muted" }, tr("c_file")), h("td", {})));
-  yours.append(h("h3", { style: "margin-top:0" }, tr("c_yours")), rows.length || fileRows.length ? h("div", { style: "overflow-x:auto" }, h("table", {}, ...rows, ...fileRows)) : h("p", { class: "muted" }, tr("c_none")));
-
-  // ---- catalog
-  const cats = ["all", "email", "jobs", "stores", "payments", "messaging", "calendar", "advanced"];
-  state.connCat = state.connCat || "all";
-  const chips = h("div", { class: "tabs", style: "display:flex;flex-wrap:wrap;gap:4px" }, ...cats.map((k) => h("button", { class: state.connCat === k ? "on" : "", onclick: () => { state.connCat = k; render("connections"); } }, tr("cat_" + k))));
-  const grid = h("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:12px" });
-  const formBox = h("div");
-  for (const e of cat.entries.filter((x) => state.connCat === "all" || x.category === state.connCat)) {
-    const card = h("div", { class: "panel", style: "margin:0;display:flex;flex-direction:column;gap:8px" },
-      h("div", { style: "display:flex;justify-content:space-between;gap:8px" }, h("b", {}, tr("name_" + e.type) === "name_" + e.type ? e.name : tr("name_" + e.type)), h("span", { class: "small muted" }, tr("cat_" + e.category))),
-      h("div", { class: "small" }, e.reads[lang] || e.reads.en),
-      e.note ? h("div", { class: "small", style: "color:var(--err)" }, e.note[lang] || e.note.en) : "");
-    if (e.status === "coming_soon") card.append(badge(tr("c_soon").toUpperCase(), "UNSUPPORTED"));
-    else if (e.auth === "oauth_google") {
-      if (cat.googleOAuthConfigured) card.append(h("a", { class: "primary", href: "/api/oauth/google/start", style: "background:var(--accent);color:#04111f;padding:8px 14px;border-radius:6px;font-weight:600;text-decoration:none;align-self:flex-start" }, tr("c_google")));
-      else card.append(h("div", { class: "small muted" }, tr("c_google_off")));
-      card.append(h("button", { class: "primary", style: "margin:0;align-self:flex-start", onclick: () => openForm("gmail", formBox) }, tr("c_manual")));
-    } else if (e.auth === "none") card.append(h("div", { class: "small" }, hasGmail ? badge(tr("c_has_gmail"), "VERIFIED") : tr("c_need_gmail")));
-    else card.append(h("button", { class: "primary", style: "margin:0;align-self:flex-start", onclick: () => openForm(e.type, formBox) }, e.category === "advanced" ? tr("c_custom") : tr("c_connect")));
-    grid.append(card);
-  }
-  catalogBox.append(h("div", { class: "panel" }, h("h3", { style: "margin-top:0" }, tr("c_catalog")), chips, formBox, grid));
+function render() {
+  const m = $("#main"); m.replaceChildren();
+  if (S.view === "connections") return viewConnections(m);
+  if (S.view === "history") return viewHistory(m);
+  if (S.view === "run") return viewRunDetail(m, S.runDetail);
+  m.append(stepper());
+  ({ 1: stepAgent, 2: stepDescribe, 3: stepTests, 4: stepResults })[S.step](m);
 }
 
+// ---------------------------------------------------------------- step 1: your agent
+function stepAgent(m) {
+  const card = h("section", { class: "card" });
+  const choice = (mode, icon, title, desc) => h("button", { type: "button", class: "choice", "aria-pressed": String(S.mode === mode), onclick: () => { S.mode = mode; S.smoke = null; save(); render(); } },
+    h("span", { class: "ic" }, svg(ICON[icon])), h("div", {}, h("b", {}, t(title)), h("span", {}, t(desc))));
+  const url = h("input", { id: "a-url", type: "url", value: S.url, placeholder: S.mode === "web" ? "https://mi-agente.com/chat" : "https://api.mi-agente.com/chat", autocomplete: "off" });
+  url.oninput = () => { S.url = url.value.trim(); S.smoke = null; save(); };
+  const ver = h("input", { id: "a-ver", value: S.version, placeholder: "v1" }); ver.oninput = () => { S.version = ver.value.trim(); save(); };
+  const advField = (key, labelKey) => { const i = h("input", { id: "adv-" + key, value: S.adv[key] || "" }); i.oninput = () => { S.adv[key] = i.value.trim(); save(); }; return [h("label", { for: "adv-" + key }, t(labelKey)), i]; };
+  const adv = S.mode === "web"
+    ? h("details", {}, h("summary", {}, t("a_adv")), h("p", { class: "hint" }, t("a_sel_h")), ...advField("inputSelector", "a_sel_in"), ...advField("sendSelector", "a_sel_send"), ...advField("replySelector", "a_sel_out"))
+    : h("details", {}, h("summary", {}, t("a_adv")), ...advField("taskField", "a_in"), ...advField("responseField", "a_out"), ...advField("correlationField", "a_corr"));
+  const result = h("div", { "aria-live": "polite" });
+  if (S.smoke) result.append(smokeBox(S.smoke));
+  const tryBtn = h("button", { type: "button", class: "btn primary", onclick: async () => {
+    if (!/^https?:\/\//.test(S.url)) { result.replaceChildren(h("div", { class: "notice bad" }, t("err_url"))); return; }
+    tryBtn.disabled = true; result.replaceChildren(h("div", { class: "notice neutral", style: "display:flex;gap:10px;align-items:center" }, h("span", { class: "spinner" }), t("a_trying")));
+    const t0 = performance.now();
+    try {
+      const body = S.mode === "web" ? { kind: "browser_chat", url: S.url, ...(S.adv.inputSelector ? { inputSelector: S.adv.inputSelector } : {}), ...(S.adv.sendSelector ? { sendSelector: S.adv.sendSelector } : {}), ...(S.adv.replySelector ? { replySelector: S.adv.replySelector } : {}) } : { kind: "blackbox_http", endpoint: S.url, mapping: agentSpec().mapping };
+      const r = await call("POST", "/api/connect", body);
+      S.smoke = { ok: r.smoke.ok, reply: r.smoke.finalMessage, reason: r.smoke.reason, ms: Math.round(performance.now() - t0) };
+    } catch (e) { S.smoke = { ok: false, reason: e.message }; }
+    tryBtn.disabled = false; render();
+  } }, t("a_try"));
+  const sample = h("button", { type: "button", class: "btn small", onclick: () => { S.mode = "api"; S.url = "http://127.0.0.1:3399/chat"; S.version = S.version || "v1"; S.smoke = null; save(); render(); } }, t("a_sample"));
+  card.append(h("h1", {}, t("a_title")), h("p", { class: "lead" }, t("a_lead")),
+    h("div", { class: "choices" }, choice("web", "chat", "a_web", "a_web_d"), choice("api", "code", "a_api", "a_api_d")),
+    h("label", { for: "a-url" }, t(S.mode === "web" ? "a_url_web" : "a_url_api")), url,
+    h("label", { for: "a-ver" }, t("a_name")), ver, h("div", { class: "hint" }, t("a_name_h")),
+    adv, result,
+    h("div", { class: "actions" }, tryBtn, sample, h("span", { class: "spacer" }), h("button", { type: "button", class: "btn primary", disabled: !S.smoke?.ok, onclick: () => { S.step = 2; render(); } }, t("next"), " →")));
+  m.append(card);
+}
+function smokeBox(sm) {
+  if (sm.ok) return h("div", { class: "notice ok" }, h("b", {}, "✓ ", t("a_ok"), sm.ms ? ` ${t("a_in_s")} ${sm.ms < 1000 ? sm.ms + " ms" : (sm.ms / 1000).toFixed(1) + " s"}` : ""), h("div", { class: "bubble", style: "margin-top:8px;background:transparent;padding:0" }, `“${(sm.reply || "").slice(0, 300)}”`));
+  return h("div", { class: "notice bad" }, h("b", {}, t("a_fail")), h("div", { class: "small", style: "margin-top:4px" }, sm.reason || ""));
+}
 
-// ---------------------------------------------------------------- design tests (AL-06)
+// ---------------------------------------------------------------- step 2: what it does
+function stepDescribe(m) {
+  const desc = h("textarea", { id: "d-desc", rows: 3, placeholder: t("d_desc_ph") }, S.desc);
+  desc.oninput = () => { S.desc = desc.value; save(); };
+  const spec = h("textarea", { id: "d-spec", rows: 2, placeholder: t("d_spec_ph") }, S.spec);
+  spec.oninput = () => { S.spec = spec.value; save(); };
+  const ex = ["d_ex1", "d_ex2", "d_ex3"].map((k) => h("button", { type: "button", class: "chip", onclick: () => { desc.value = t(k) + "."; S.desc = desc.value; save(); } }, t(k)));
+  const msg = h("div", { "aria-live": "polite" });
+  const go = h("button", { type: "button", class: "btn primary", onclick: () => proposeTests(go, msg) }, t("d_go"), " →");
+  m.append(h("section", { class: "card" }, h("h1", {}, t("d_title")), h("p", { class: "lead" }, t("d_lead")),
+    h("label", { for: "d-desc", class: "sr" }, t("d_title")), desc, h("div", { class: "chips", "aria-label": t("d_examples") }, h("span", { class: "muted small", style: "align-self:center" }, t("d_examples")), ...ex),
+    h("label", { for: "d-spec" }, t("d_spec")), spec, msg,
+    h("div", { class: "actions" }, h("button", { type: "button", class: "btn", onclick: () => { S.step = 1; render(); } }, "← ", t("back")), h("span", { class: "spacer" }), go)));
+}
+async function proposeTests(btn, msg) {
+  if (S.desc.trim().length < 10) { msg.replaceChildren(h("div", { class: "notice bad" }, t("err_desc"))); return; }
+  if (btn) btn.disabled = true;
+  msg && msg.replaceChildren(h("div", { class: "notice neutral", style: "display:flex;gap:10px;align-items:center" }, h("span", { class: "spinner" }), t("d_going")));
+  try {
+    S.plan = await call("POST", "/api/plan", { description: S.desc, specifics: S.spec, lang, agentMode: S.mode === "web" ? "WEB_UI" : "HTTP_API" });
+    S.picks = Object.fromEntries(S.plan.scenarios.map((s) => [s.id, { on: s.readiness === "READY", task: s.task, approved: false }]));
+    S.step = 3; render();
+  } catch (e) { msg && msg.replaceChildren(h("div", { class: "notice bad" }, e.message)); if (btn) btn.disabled = false; }
+}
+
+// ---------------------------------------------------------------- step 3: tests
 function describeCheck(c) {
   const es = lang === "es";
   switch (c.type) {
-    case "email_received": return (es ? `Llega un correo a ${c.to}` : `An email arrives at ${c.to}`) + (c.subjectContains ? (es ? ` con asunto que contiene “${c.subjectContains}”` : ` with subject containing “${c.subjectContains}”`) : "") + (c.exactly ? (es ? ` — exactamente ${c.exactly}` : ` — exactly ${c.exactly}`) : "") + (c.requireRef === false ? (es ? " (por ventana de tiempo)" : " (by time window)") : "");
-    case "order_exists": return (es ? "Existe el pedido" : "The order exists") + (c.quantity ? ` × ${c.quantity}` : "") + (c.productContains ? ` · ${c.productContains}` : "");
-    case "payment_exists": return (es ? "Existe el cobro" : "The charge exists") + (c.status ? ` · ${c.status}` : "") + (c.amount !== undefined ? ` · ${c.amount}` : "");
-    case "claim_matches_external_state": return (es ? "Lo que el agente afirma coincide con lo comprobado: " : "What the agent claims matches what was proven: ") + c.claim;
+    case "email_received": {
+      const to = c.to.replace("+{ref}", "+…");
+      let s = es ? `Llega un correo a ${to}` : `An email arrives at ${to}`;
+      if (c.subjectContains && c.subjectContains !== "{ref}") s += es ? ` con el asunto “${c.subjectContains}”` : ` with the subject “${c.subjectContains}”`;
+      if (c.exactly) s += es ? ` — exactamente ${c.exactly} (sin duplicados)` : ` — exactly ${c.exactly} (no duplicates)`;
+      return s;
+    }
+    case "order_exists": return es ? "El pedido existe en la tienda" + (c.quantity ? ` (${c.quantity} unidad)` : "") : "The order exists in the store" + (c.quantity ? ` (${c.quantity} unit)` : "");
+    case "payment_exists": return es ? "El cobro existe" + (c.status ? " y se completó" : "") : "The charge exists" + (c.status ? " and succeeded" : "");
+    case "claim_matches_external_state": return es ? "Si tu agente dice que lo hizo, de verdad pasó" : "If your agent says it did it, it really happened";
     default: return c.type;
   }
 }
-function viewDesign(m) {
-  const desc = h("textarea", { id: "d-desc", rows: 3, placeholder: tr("d_desc_ph") }, state.designDesc || "");
-  const spec = h("textarea", { id: "d-spec", rows: 3, placeholder: tr("d_spec_ph") }, state.designSpec || "");
-  const out = h("div"); const err = h("div", { class: "err", role: "alert" });
-  const propose = h("button", { class: "primary", onclick: async () => {
-    err.textContent = ""; state.designDesc = desc.value; state.designSpec = spec.value; propose.disabled = true; out.replaceChildren(h("p", { class: "muted" }, tr("d_proposing")));
-    try { state.plan = await call("POST", "/api/plan", { description: desc.value, specifics: spec.value, lang, agentMode: state.agent?.kind === "browser_chat" ? "WEB_UI" : state.agent?.kind === "http_bridge" ? "BRIDGE" : state.agent?.kind === "sample" ? "SAMPLE" : "HTTP_API" }); paintPlan(out); }
-    catch (e) { out.replaceChildren(); err.textContent = e.message; }
-    propose.disabled = false;
-  } }, tr("d_propose"));
-  m.append(h("div", { class: "panel" }, h("h2", { style: "margin:0 0 6px" }, tr("d_title")), h("p", { class: "muted", style: "margin:0" }, tr("d_sub")),
-    h("p", { class: "small" }, tr("d_agent"), ": ", state.agent ? h("b", {}, state.agentLabel) : h("span", { class: "err" }, tr("d_noagent"))),
-    h("label", { for: "d-desc" }, tr("d_desc")), desc, h("label", { for: "d-spec" }, tr("d_spec")), spec, propose, err), out);
-  if (state.plan) paintPlan(out);
-}
-function paintPlan(out) {
-  const p = state.plan; const items = new Map();
-  const readyCls = { READY: "VERIFIED", NEEDS_ACCESS: "FAIL", NEEDS_REVIEW: "INCONCLUSIVE", UNSUPPORTED: "UNSUPPORTED" };
-  const cards = p.scenarios.map((s) => {
-    const include = h("input", { type: "checkbox", id: `inc-${s.id}`, style: "width:auto" }); include.checked = s.readiness === "READY";
-    if (s.readiness !== "READY") include.disabled = true;
-    const task = h("textarea", { id: `task-${s.id}`, rows: 2 }, s.task);
-    const repeats = h("input", { type: "number", id: `rep-${s.id}`, min: 1, max: 100, value: 1, style: "max-width:120px" });
-    const approve = s.approvalRequired ? h("input", { type: "checkbox", id: `ap-${s.id}`, style: "width:auto" }) : null;
-    items.set(s.id, { include, task, repeats, approve });
-    return h("div", { class: "panel", style: "display:flex;flex-direction:column;gap:6px" },
-      h("div", { style: "display:flex;gap:10px;align-items:center;flex-wrap:wrap" }, include, h("label", { for: `inc-${s.id}`, style: "margin:0;font-size:16px;color:var(--text);font-weight:600" }, s.title),
-        badge(tr("r_" + s.readiness), readyCls[s.readiness]), h("span", { class: "small muted" }, tr("d_src_" + s.source), " · ", tr("d_risk"), " ", s.risk)),
-      h("div", { class: "small muted" }, s.readinessReason),
-      h("label", { for: `task-${s.id}` }, tr("d_task")), task,
-      h("label", {}, tr("d_criteria")), h("ul", { style: "margin:0;padding-left:20px" }, ...s.checks.map((c) => h("li", { class: "small" }, describeCheck(c), c.critical ? h("span", { class: "muted" }, " · critical") : ""))),
-      h("div", { class: "small" }, tr("d_needs"), ": ", ...s.needs.map((n) => h("span", {}, `${tr("k_" + n.kind)} — ${n.why} `, s.assignments[n.kind] ? h("code", {}, `source: ${s.assignments[n.kind]}`) : h("a", { href: "/connections", onclick: (e) => { e.preventDefault(); go("connections"); } }, tr("d_connect_link"))))),
-      s.limitations.length ? h("div", { class: "small", style: "color:var(--err)" }, tr("d_limits"), ": ", s.limitations.join(" · ")) : "",
-      approve ? h("div", { style: "display:flex;gap:8px;align-items:center" }, approve, h("label", { for: `ap-${s.id}`, style: "margin:0;color:var(--err)" }, tr("d_approve"))) : "",
-      h("div", { style: "display:flex;gap:8px;align-items:center" }, h("label", { for: `rep-${s.id}`, style: "margin:0" }, tr("d_repeats")), repeats));
-  });
-  const err = h("div", { class: "err", role: "alert" });
-  const run = h("button", { class: "primary", onclick: async () => {
-    err.textContent = "";
-    if (!state.agent) { err.textContent = tr("d_noagent"); return; }
-    const sel = p.scenarios.filter((s) => items.get(s.id).include.checked).map((s) => { const it = items.get(s.id); return { scenarioId: s.id, task: it.task.value, repeats: Number(it.repeats.value) || 1, approved: it.approve ? it.approve.checked : false }; });
-    try { const r = await call("POST", "/api/plan/run", { planId: p.planId, agent: state.agent, items: sel }); state.lastRunIds = r.runIds; go("run", r.runIds[0]); }
-    catch (e) { err.textContent = e.message; }
-  } }, tr("d_run"));
-  out.replaceChildren(
-    h("div", { class: "panel small" }, tr("d_planner"), ": ", h("b", {}, p.planner.name), " — ", p.planner.note, " · ", tr("d_caps"), ": ", p.capabilitiesDetected.join(", ") || tr("d_none")),
-    ...cards,
-    p.unsupported.length ? h("div", { class: "panel" }, h("h3", { style: "margin-top:0" }, tr("d_unsupported")), h("ul", { style: "margin:0;padding-left:20px" }, ...p.unsupported.map((u) => h("li", { class: "small" }, h("b", {}, u.text), " — ", u.why)))) : "",
-    p.scenarios.length ? h("div", { class: "panel" }, run, err) : "");
-}
-let fieldSeq = 0;
-function field(labelKey, input) { const id = `f-${++fieldSeq}`; input.id = id; return h("div", {}, h("label", { for: id }, tr(labelKey)), input); }
-function openForm(type, box) {
-  const inp = (attrs = {}) => h("input", attrs);
-  const out = h("div", { class: "small", role: "status" });
-  const els = {};
-  const parts = [];
-  if (type === "gmail") {
-    els.clientId = inp(); els.clientSecret = inp({ type: "password" }); els.refreshToken = inp({ type: "password" });
-    parts.push(field("f_cid", els.clientId), field("f_csecret", els.clientSecret), field("f_rtoken", els.refreshToken));
-  } else if (type === "stripe_test") {
-    els.name = inp({ value: "Stripe test" }); els.apiKey = inp({ type: "password", placeholder: "rk_test_…" });
-    parts.push(field("f_name", els.name), field("f_key", els.apiKey));
-  } else if (type === "http_json") {
-    els.name = inp({ placeholder: "My store orders" });
-    els.kind = h("select", {}, ...["order", "payment", "email"].map((k) => h("option", { value: k }, tr("k_" + k))));
-    els.url = inp({ placeholder: "https://staging.example.com/api/orders?note={ref}" }); els.itemsPath = inp({ placeholder: "orders" });
-    els.fields = h("textarea", { rows: 3 }, '{"id":"id","product":"product_name","quantity":"qty","total":"total","status":"status","ref":"note"}');
-    els.headerName = inp({ placeholder: "Authorization" }); els.headerValue = inp({ type: "password", placeholder: "Bearer …" }); els.healthUrl = inp({ placeholder: "https://staging.example.com/api/health" });
-    parts.push(field("f_name", els.name), field("f_kind", els.kind), field("f_url", els.url), field("f_items", els.itemsPath), field("f_fieldsjson", els.fields), field("f_hname", els.headerName), field("f_hval", els.headerValue), field("f_health", els.healthUrl));
-  } else if (type === "mcp_http") {
-    els.name = inp({ placeholder: "Outlook via MCP" }); els.url = inp({ placeholder: "https://mcp.example.com/mcp" }); els.authorization = inp({ type: "password", placeholder: "Bearer …" });
-    els.kind = h("select", {}, ...["email", "order", "payment"].map((k) => h("option", { value: k }, tr("k_" + k))));
-    els.tool = inp({ placeholder: "search_messages" }); els.args = h("textarea", { rows: 2 }, '{"query":"{ref}"}');
-    els.mode = h("select", {}, h("option", { value: "text" }, "text"), h("option", { value: "json" }, "json"));
-    els.itemsPath = inp({ placeholder: "results" }); els.fields = h("textarea", { rows: 2 }, '{"id":"id","to":"to","subject":"subject","body":"body"}');
-    parts.push(field("f_name", els.name), field("f_mcpurl", els.url), field("f_auth", els.authorization), field("f_kind", els.kind), field("f_tool", els.tool), field("f_args", els.args), field("f_parse", els.mode), field("f_items", els.itemsPath), field("f_fieldsjson", els.fields));
-  }
-  const v = (k) => (els[k] ? els[k].value.trim() : "");
-  const json = (k) => { try { return JSON.parse(v(k) || "{}"); } catch { throw new Error(`${tr("f_fieldsjson")}: invalid JSON`); } };
-  const save = h("button", { class: "primary", onclick: async () => {
-    out.className = "small"; out.textContent = tr("c_saving"); save.disabled = true;
+function stepTests(m) {
+  const p = S.plan;
+  const n = p.scenarios.length;
+  const head = h("section", { class: "card" }, h("h1", {}, n === 0 ? t("p_title0") : n === 1 ? t("p_title1") : t("p_title", { n })), h("p", { class: "lead" }, t("p_lead")),
+    h("div", { class: "notice " + (p.planner.kind === "agents_api" ? "info" : "neutral"), style: "margin-top:0" }, p.planner.kind === "agents_api" ? t("p_ai") : t("p_rules")));
+  m.append(head);
+  for (const s of p.scenarios) m.append(testCard(s));
+  if (p.unsupported.length) m.append(h("section", { class: "card" }, h("h2", {}, t("p_cant")), h("ul", { class: "clean" }, ...p.unsupported.map((u) => h("li", {}, h("span", { class: "mark warn" }, "!"), h("div", {}, h("b", {}, u.text), h("div", { class: "muted small" }, u.why)))))));
+  if (!n) { m.append(h("div", { class: "actions" }, h("button", { type: "button", class: "btn", onclick: () => { S.step = 2; render(); } }, "← ", t("back")))); return; }
+  const counts = [1, 3, 10, 50];
+  const custom = h("input", { type: "number", min: 1, max: 100, value: counts.includes(S.repeats) ? "" : S.repeats, placeholder: t("p_custom"), style: "max-width:110px", "aria-label": t("p_custom") });
+  custom.oninput = () => { const v = Number(custom.value); if (v >= 1 && v <= 100) { S.repeats = v; paintRun(); } };
+  const err = h("div", { "aria-live": "polite" });
+  const runBtn = h("button", { type: "button", class: "btn primary" });
+  const paintRun = () => {
+    const on = p.scenarios.filter((s) => S.picks[s.id].on).length;
+    const total = on * S.repeats;
+    runBtn.replaceChildren(total === 1 ? t("p_run1") : t("p_run", { n: total }), " →");
+    runBtn.disabled = total === 0;
+    chips.forEach((c) => c.setAttribute("aria-pressed", String(Number(c.dataset.n) === S.repeats)));
+  };
+  const chips = counts.map((c) => { const b = h("button", { type: "button", class: "chip", "data-n": c, onclick: () => { S.repeats = c; custom.value = ""; paintRun(); } }, String(c)); return b; });
+  runBtn.onclick = async () => {
+    const items = p.scenarios.filter((s) => S.picks[s.id].on).map((s) => ({ scenarioId: s.id, task: S.picks[s.id].task, repeats: S.repeats, approved: S.picks[s.id].approved }));
+    if (!items.length) { err.replaceChildren(h("div", { class: "notice bad" }, t("p_none_on"))); return; }
+    runBtn.disabled = true;
     try {
-      let body;
-      if (type === "gmail") body = { type, clientId: v("clientId"), clientSecret: v("clientSecret"), refreshToken: v("refreshToken") };
-      else if (type === "stripe_test") body = { type, name: v("name"), apiKey: v("apiKey") };
-      else if (type === "http_json") body = { type, name: v("name"), kind: v("kind"), url: v("url"), fields: json("fields"), ...(v("itemsPath") ? { itemsPath: v("itemsPath") } : {}), ...(v("headerName") ? { headerName: v("headerName"), headerValue: v("headerValue") } : {}), ...(v("healthUrl") ? { healthUrl: v("healthUrl") } : {}) };
-      else body = { type, name: v("name"), url: v("url"), kind: v("kind"), tool: v("tool"), args: json("args"), parse: v("mode") === "json" ? { mode: "json", fields: json("fields"), ...(v("itemsPath") ? { itemsPath: v("itemsPath") } : {}) } : { mode: "text" }, ...(v("authorization") ? { authorization: v("authorization") } : {}) };
-      const c = await call("POST", "/api/connections", body);
-      out.replaceChildren(badge(c.status.state === "VERIFIED" ? tr("verified") : tr("unavailable"), c.status.state === "VERIFIED" ? "VERIFIED" : "FAIL"), " ", c.status.state === "VERIFIED" ? tr("c_saved") : tr("c_saved_bad"), ": ", c.status.detail, " · ", h("code", {}, `source: ${c.slug}`));
-      setTimeout(() => { if (state.view === "connections") render("connections"); }, c.status.state === "VERIFIED" ? 1200 : 3500);
-    } catch (e) { out.className = "small err"; out.textContent = e.message; save.disabled = false; }
-  } }, tr("c_save"));
-  const cancel = h("button", { style: "margin-left:8px;min-height:36px;border:1px solid var(--line);border-radius:6px;background:none;color:var(--text);cursor:pointer;padding:6px 12px", onclick: () => box.replaceChildren() }, tr("c_cancel"));
-  box.replaceChildren(h("div", { class: "panel", style: "border-color:var(--accent)" }, h("h3", { style: "margin-top:0" }, type === "http_json" || type === "mcp_http" ? tr("c_custom") : tr("c_connect")), type === "http_json" || type === "mcp_http" ? h("p", { class: "small muted" }, tr("c_custom_sub")) : "", ...parts, h("div", { style: "display:flex;gap:8px;align-items:center" }, save, cancel), out));
-  box.scrollIntoView({ behavior: "smooth", block: "start" });
+      const r = await call("POST", "/api/plan/run", { planId: p.planId, agent: agentSpec(), items });
+      S.runIds = r.runIds; S.runScen = items.flatMap((it) => Array(it.repeats).fill(it.scenarioId)); S.runTitles = Object.fromEntries(p.scenarios.map((s) => [s.id, s.title])); S.step = 4; render();
+    } catch (e) { err.replaceChildren(h("div", { class: "notice bad" }, e.message)); runBtn.disabled = false; }
+  };
+  m.append(h("section", { class: "card" }, h("h2", {}, t("p_times")), h("div", { class: "chips" }, ...chips, custom), err,
+    h("div", { class: "actions" }, h("button", { type: "button", class: "btn", onclick: () => { S.step = 2; render(); } }, "← ", t("back")), h("span", { class: "spacer" }), runBtn)));
+  paintRun();
+  S.paintRun = paintRun;
+}
+function testCard(s) {
+  const pick = S.picks[s.id];
+  const ready = s.readiness === "READY";
+  const missing = s.needs.filter((n) => !s.assignments[n.kind]).map((n) => n.kind);
+  const status = ready ? h("span", { class: "pill ok" }, "✓ ", t("p_ready"))
+    : s.readiness === "NEEDS_ACCESS" ? h("span", { class: "pill warn" }, t("p_access", { x: missing.map((k) => t("k_" + k)).join(", ") || t("k_email") }))
+    : s.readiness === "NEEDS_REVIEW" ? h("span", { class: "pill info" }, t("p_review")) : h("span", { class: "pill neutral" }, t("p_unsupported"));
+  const sw = h("input", { type: "checkbox", id: "on-" + s.id, role: "switch", "aria-label": s.title });
+  sw.checked = pick.on; sw.disabled = !ready;
+  const card = h("article", { class: "test" + (pick.on ? "" : " off") });
+  sw.onchange = () => { pick.on = sw.checked; card.className = "test" + (pick.on ? "" : " off"); S.paintRun && S.paintRun(); };
+  const task = h("textarea", { id: "task-" + s.id, rows: 2 }, pick.task); task.oninput = () => { pick.task = task.value; };
+  const approve = s.approvalRequired ? h("input", { type: "checkbox", id: "ap-" + s.id, style: "width:auto;margin-top:4px" }) : null;
+  if (approve) { approve.checked = pick.approved; approve.onchange = () => { pick.approved = approve.checked; }; }
+  card.append(h("div", { class: "test-head" },
+    h("label", { class: "switch", for: "on-" + s.id }, sw, h("span", {})),
+    h("div", { class: "grow" }, h("p", { class: "test-title" }, s.title), h("div", { style: "display:flex;gap:8px;flex-wrap:wrap;align-items:center" }, status,
+      missing.length ? h("button", { type: "button", class: "btn small", onclick: () => openConnect(missing[0]) }, t("p_connect", { x: t("k_" + missing[0]) })) : ""),
+      h("ul", { class: "clean" }, ...s.checks.map((c) => h("li", {}, h("span", { class: "mark ok" }, "✓"), describeCheck(c)))),
+      approve ? h("div", { class: "notice warn", style: "display:flex;gap:10px;align-items:flex-start" }, approve, h("label", { for: "ap-" + s.id, style: "margin:0;font-weight:500" }, t("p_approve"))) : "",
+      h("details", {}, h("summary", {}, t("p_details")),
+        h("label", { for: "task-" + s.id }, t("p_task")), task,
+        s.limitations.length ? h("div", {}, h("label", {}, t("p_limits")), h("ul", { class: "clean" }, ...s.limitations.map((l) => h("li", { class: "small muted" }, "• ", l)))) : ""))));
+  return card;
 }
 
-// ---------------------------------------------------------------- connect
-function viewConnect(m) {
-  const tabs = [["samples", "Sample agents"], ["agents_api", "Agents API"], ["http_bridge", "External Agent / HTTP Bridge"], ["blackbox_http", "Black-box HTTP"], ["browser", "Browser chat (beta)"]];
-  const t = h("div", { class: "tabs row" }); for (const [k, l] of tabs) t.append(h("button", { class: state.connectTab === k ? "on" : "", onclick: () => { state.connectTab = k; render("connect"); } }, l));
-  m.append(h("div", { class: "panel" }, h("div", { class: "muted small" }, "Selected agent: ", h("b", {}, state.agentLabel)), t));
-  const p = h("div", { class: "panel" }); m.append(p);
-  if (state.connectTab === "samples") {
-    p.append(h("p", { class: "muted" }, "Deterministic scripted agents (no model calls). Labeled as scripted in every result."));
-    for (const s of state.meta.samples) p.append(h("div", { class: "row" }, h("div", {}, s.label), h("button", { class: "primary", onclick: () => select({ kind: "sample", id: s.id }, s.label) }, "Use this agent")));
-  }
-  if (state.connectTab === "agents_api") {
-    const blocked = state.meta.agentsApi !== "available";
-    const ins = h("textarea", { rows: 5, placeholder: "Agent instructions" }); const model = h("input", { placeholder: "Model (default gpt-6-astra)" });
-    const err = h("div", { class: "err small" });
-    p.append(h("p", {}, "Status: ", badge(blocked ? "BLOCKED" : "VERIFIED", blocked ? "BLOCKED" : "VERIFIED"), " ", h("span", { class: "muted" }, state.meta.agentsApi)),
-      h("label", {}, "Instructions"), ins, h("label", {}, "Model"), model,
-      h("button", { class: "primary", disabled: blocked, onclick: () => { if (!ins.value.trim()) { err.textContent = "Instructions are empty."; return; } select({ kind: "agents_api", instructions: ins.value, ...(model.value ? { model: model.value } : {}) }, `Agents API (${model.value || "gpt-6-astra"})`); } }, "Use this agent"), err);
-  }
-  if (state.connectTab === "http_bridge") {
-    const ep = h("input", { value: "http://127.0.0.1:8000/agent/run" }); const ver = h("input", { placeholder: "Version label, e.g. v1 or git sha" }); const out = h("div");
-    p.append(h("p", { class: "muted" }, "Developer QA (instrumented): the agent calls ZeroBug's run-scoped tool URLs, so every effect is observed in ZeroBug's world. Contract: docs/HTTP-BRIDGE-CONTRACT.md"),
-      h("label", {}, "Agent endpoint (POST /agent/run)"), ep, h("label", {}, "Version label"), ver,
-      h("button", { class: "primary", onclick: () => smoke({ kind: "http_bridge", endpoint: ep.value }, out, () => select({ kind: "http_bridge", endpoint: ep.value, ...(ver.value ? { version: ver.value, label: `Bridge agent ${ver.value}` } : {}) }, `HTTP bridge ${ep.value} ${ver.value}`)) }, "Connect & run smoke test"), out);
-  }
-  if (state.connectTab === "blackbox_http") {
-    const ep = h("input", { value: "http://127.0.0.1:8000/chat" }); const tf = h("input", { value: "message" }); const rf = h("input", { value: "reply" }); const cf = h("input", { value: "conversation_id" });
-    const vu = h("input", { placeholder: "Optional read-only verifier URL (token comes from the server vault)" }); const ver = h("input", { placeholder: "Version label" }); const out = h("div");
-    const spec = () => ({ endpoint: ep.value, mapping: { taskField: tf.value, responseField: rf.value, ...(cf.value ? { correlationField: cf.value } : {}) }, ...(vu.value ? { verifierUrl: vu.value } : {}) });
-    p.append(h("p", { class: "muted" }, "Minimal access: ZeroBug sends a message and reads the reply. It cannot see tool calls or inject faults. Side-effect requirements can PASS only with a separately granted read-only verifier; otherwise they end INCONCLUSIVE."),
-      h("label", {}, "Chat endpoint"), ep, h("div", { class: "row" }, h("div", {}, h("label", {}, "Task field"), tf), h("div", {}, h("label", {}, "Reply field"), rf), h("div", {}, h("label", {}, "Correlation field"), cf)),
-      h("label", {}, "Verifier"), vu, h("label", {}, "Version label"), ver,
-      h("button", { class: "primary", onclick: () => smoke({ kind: "blackbox_http", ...spec() }, out, () => select({ kind: "blackbox_http", ...spec(), ...(ver.value ? { version: ver.value, label: `Black-box ${ver.value}` } : {}) }, `Black-box ${ep.value} ${ver.value}`)) }, "Connect & run smoke test"), out);
-  }
-  if (state.connectTab === "browser") {
-    const url = h("input", { placeholder: "https://vendor.example/chat" }); const inp = h("input", { placeholder: "Input selector, e.g. textarea" }); const snd = h("input", { placeholder: "Send button selector (optional; Enter otherwise)" }); const rep = h("input", { placeholder: "Reply bubble selector, e.g. .assistant-message" }); const ver = h("input", { placeholder: "Version label" }); const err = h("div", { class: "err small" });
-    p.append(h("p", {}, badge("BETA", "DECLARED"), " Opens the chat page in a headless browser, types the task and reads the settled reply. Tested only against a local test page so far. Side effects are proven only by connector checks (Gmail, orders, payments)."),
-      h("p", { class: "small muted" }, "Evidence sources configured on the server: ", state.meta.evidenceSources.length ? state.meta.evidenceSources.join(", ") : "none (claims about emails or purchases will be INCONCLUSIVE)"),
-      h("label", {}, "Chat page URL"), url, h("label", {}, "Input selector"), inp, h("label", {}, "Send selector"), snd, h("label", {}, "Reply selector"), rep, h("label", {}, "Version label"), ver,
-      h("button", { class: "primary", onclick: () => { if (!url.value || !inp.value || !rep.value) { err.textContent = "URL, input selector and reply selector are required."; return; } select({ kind: "browser_chat", url: url.value, inputSelector: inp.value, replySelector: rep.value, ...(snd.value ? { sendSelector: snd.value } : {}), ...(ver.value ? { version: ver.value, label: `Browser chat ${ver.value}` } : {}) }, `Browser chat ${url.value} ${ver.value}`); } }, "Use this agent"), err);
-  }
-}
-async function smoke(body, out, onUse) {
-  out.replaceChildren(h("p", { class: "muted" }, "Running a real smoke task…"));
-  try {
-    const r = await call("POST", "/api/connect", body);
-    const rows = Object.entries(r.capabilities).map(([k, v]) => h("tr", {}, h("td", {}, k), h("td", {}, badge(v.state)), h("td", { class: "small muted" }, v.basis)));
-    out.replaceChildren(
-      h("p", {}, "Smoke: ", badge(r.smoke.ok ? "PASS" : "FAIL"), ` ${r.smoke.status}, ${r.smoke.toolCallsObserved} tool call(s) observed by ZeroBug · run ${r.smoke.runId}`),
-      h("p", { class: "small" }, "Handshake: ", r.handshake.ok ? `declared by ${r.handshake.declared.agent.name} (${r.handshake.declared.agent.framework})` : r.handshake.error),
-      h("table", {}, h("tr", {}, h("th", {}, "Capability"), h("th", {}, "State"), h("th", {}, "Basis")), rows),
-      h("p", {}, h("b", {}, "ZeroBug can independently verify: "), r.canVerify.join("; ") || "nothing beyond the reply"),
-      h("p", {}, h("b", {}, "ZeroBug cannot verify: "), r.cannotVerify.join("; ")),
-      h("button", { class: "primary", disabled: !r.smoke.ok, onclick: onUse }, "Use this agent"));
-  } catch (e) { out.replaceChildren(h("p", { class: "err" }, e.message)); }
-}
-function select(spec, label) { state.agent = spec; state.agentLabel = label; go("scenarios"); }
-
-// ---------------------------------------------------------------- scenarios
-async function viewScenarios(m) {
-  if (!state.scenarios.length) state.scenarios = await call("GET", "/api/scenarios");
-  const err = h("div", { class: "err" });
-  const reps = h("input", { type: "number", min: 1, max: 10, value: 1 });
-  const boxes = state.scenarios.map((s) => {
-    const cb = h("input", { type: "checkbox", value: s.id });
-    return h("div", { class: "scen" }, h("label", { class: "row" }, h("span", { style: "flex:0" }, cb), h("b", {}, s.title), h("span", { class: "muted small" }, `transport: ${s.agentTransport}`)),
-      h("div", {}, s.task), s.faults.length ? h("div", { class: "small" }, "Faults: ", s.faults.map((f) => JSON.stringify(f)).join("; ")) : null,
-      h("div", { class: "small muted" }, "Checks: ", s.checks.map((c) => `${c.id}${c.critical ? " (critical)" : ""}${c.informational ? " (informational)" : ""}${c.type === "claim_matches_external_state" ? " · judge" : ""}`).join(", ")),
-      s.degradedOutcome ? h("div", { class: "small" }, "Degraded policy: ", s.degradedOutcome.description) : null);
-  });
-  m.append(h("div", { class: "panel" }, h("div", {}, "Agent: ", h("b", {}, state.agentLabel)), ...boxes, h("label", {}, "Runs per scenario"), reps,
-    h("button", { class: "primary", onclick: async () => {
-      err.textContent = "";
-      if (!state.agent) { err.textContent = "Select an agent first (step 1)."; return; }
-      const ids = boxes.map((b) => b.querySelector("input")).filter((c) => c.checked).map((c) => c.value);
-      if (!ids.length) { err.textContent = "Select at least one scenario."; return; }
-      try { const r = await call("POST", "/api/runs", { agent: state.agent, scenarioIds: ids, repeats: Number(reps.value) }); state.lastRunIds = r.runIds; go("run", r.runIds[0]); }
-      catch (e) { err.textContent = e.message; }
-    } }, "Start run"), err));
-}
-
-// ---------------------------------------------------------------- run view
-async function viewRun(m, runId) {
-  const head = h("div"); const left = h("div", { class: "panel" }); const right = h("div", { class: "panel" }); const checks = h("div", { class: "panel" });
-  const others = state.lastRunIds.length > 1 ? h("div", { class: "panel small" }, "Runs in this batch: ", ...state.lastRunIds.map((id, i) => [h("a", { href: `/run/${id}`, onclick: (e) => { e.preventDefault(); go("run", id); } }, `#${i + 1}`), " "])) : null;
-  m.append(head, others || "", h("div", { class: "grid2" }, left, right), checks);
-  let stop = false; window.addEventListener("popstate", () => (stop = true), { once: true });
+// ---------------------------------------------------------------- step 4: results
+async function stepResults(m) {
+  const box = h("section", { class: "card" }); m.append(box);
+  let stop = false; const myStep = S.step;
   for (;;) {
-    let d; try { d = await call("GET", `/api/runs/${runId}`); } catch (e) { head.replaceChildren(h("p", { class: "err" }, e.message)); return; }
-    paint(d); if (d.status === "done" || stop || !location.pathname.endsWith(runId)) return;
-    await new Promise((r) => setTimeout(r, 600));
+    const runs = await Promise.all(S.runIds.map((id) => call("GET", `/api/runs/${id}`).catch(() => ({ status: "done", error: "not found" }))));
+    if (S.step !== myStep || S.view !== "wizard" || stop) return;
+    paintResults(box, runs);
+    if (runs.every((r) => r.status === "done")) return;
+    await new Promise((r) => setTimeout(r, 1000));
   }
-  function paint(d) {
-    const r = d.record;
-    head.replaceChildren(r ? h("div", { class: `banner ${r.verdict}` }, `${r.verdict} — ${r.reason}`) : d.error ? h("div", { class: "banner ERROR" }, `ERROR — ${d.error}`) : h("div", { class: "banner running" }, "Running…"),
-      r ? h("p", { class: "small muted" }, `${r.scenarioId} · run ${r.runId} · ${r.agent.label} @ ${r.agent.version} · adapter ${r.adapter.name}/${r.adapter.version} · judge ${r.judge.name} (advisory) · execution ${r.executionStatus} · outcome ${r.outcome} · task completion ${r.taskCompletion}${d.replayed ? " · replayed from stored events (no side effects repeated)" : ""} · started ${r.startedAt}`) : "");
-    left.replaceChildren(h("h3", {}, "What the agent did"), h("div", { class: "small muted" }, r ? `Transport: ${r.adapter.transport}` : ""),
-      ...d.events.filter((e) => e.type !== "world_effect").map((e) =>
-        e.type === "tool_call" ? h("div", { class: "step call" }, `→ ${e.tool}(${JSON.stringify(e.args)})`) :
-        e.type === "tool_result" ? h("div", { class: `step ${e.ok ? "okr" : "bad"}` }, e.ok ? `← ok ${JSON.stringify(e.result).slice(0, 300)}` : `← error ${e.error}`) :
-        e.type === "message" ? h("div", { class: "step msg" }, h("div", { class: "small muted" }, "Final message (a claim, not proof)"), e.text) :
-        h("div", { class: "step bad" }, `${e.category}: ${e.reason}`)));
-    const effects = d.events.filter((e) => e.type === "world_effect");
-    right.replaceChildren(h("h3", {}, "What actually happened"),
-      r && !r.worldSnapshot ? h("p", { class: "muted" }, `World state not observable (black-box). Verifiers: ${r.verifiers.join(", ")}`) : "",
-      r && r.worldSnapshot ? h("div", {}, h("label", {}, "Cart"), h("pre", {}, JSON.stringify(r.worldSnapshot.cart, null, 1)), h("label", {}, "Orders"), h("pre", {}, JSON.stringify(r.worldSnapshot.orders, null, 1)), h("label", {}, "Outbox (synthetic)"), h("pre", {}, JSON.stringify(r.worldSnapshot.outbox.map((x) => ({ to: x.to, subject: x.subject })), null, 1))) : "",
-      h("label", {}, "World effects (journal)"), ...(effects.length ? effects.map((e) => h("div", { class: "step eff" }, `${e.kind} ${JSON.stringify(e.data)}`)) : [h("div", { class: "muted small" }, "none")]),
-      r && r.faultsFired.length ? h("p", { class: "small" }, "Faults fired: ", r.faultsFired.join("; ")) : "",
-      r && r.judgeAnswers ? h("div", {}, h("label", {}, `Judge (${r.judge.name}) — interpretations, not proof`), ...r.judgeAnswers.map((a) => h("div", { class: "small" }, `${a.name}: ${a.type === "predicate" ? `p=${a.probability}` : a.type === "score" ? `${a.label} (${a.score})` : a.type === "choice" ? `${a.choice} (${a.confidence})` : "refused"}`))) : "");
-    if (!r) return checks.replaceChildren();
-    const ev = Object.fromEntries(r.evidence.map((e) => [e.id, e]));
-    checks.replaceChildren(h("h3", {}, "Checks and evidence"), h("table", {}, h("tr", {}, h("th", {}, "Check"), h("th", {}, "Status"), h("th", {}, "Reason"), h("th", {}, "Evidence")),
-      r.checks.map((c) => h("tr", {}, h("td", {}, c.checkId, c.critical ? h("div", { class: "small muted" }, "critical") : "", c.informational ? h("div", { class: "small muted" }, "informational") : "", c.goal ? h("div", { class: "small muted" }, "goal") : ""), h("td", {}, badge(c.status.toUpperCase(), c.status)), h("td", {}, c.reason, h("div", { class: "small muted" }, `via ${c.verifier}`)),
-        h("td", {}, ...c.evidenceRefs.map((id) => h("details", {}, h("summary", { class: "small" }, id), h("pre", {}, JSON.stringify(ev[id], null, 1)))))))),
-      ...r.notes.map((n) => h("p", { class: "small" }, "Note: ", n)));
-  }
+}
+function paintResults(box, runs) {
+  const done = runs.filter((r) => r.status === "done");
+  const v = (r) => r.record?.verdict ?? (r.error ? "ERROR" : null);
+  const c = (k) => done.filter((r) => v(r) === k).length;
+  const total = runs.length;
+  const pass = c("PASS"), fail = c("FAIL"), unsure = c("INCONCLUSIVE"), err = c("ERROR");
+  const pct = (n) => `${(n / total) * 100}%`;
+  const groups = new Map();
+  runs.forEach((r, i) => { const sid = S.runScen?.[i] || r.record?.scenarioId || "…"; if (!groups.has(sid)) groups.set(sid, []); groups.get(sid).push({ r, i: groups.get(sid).length, id: S.runIds[i] }); });
+  const icon = (verdict) => verdict === "PASS" ? h("span", { class: "mark ok" }, "✓") : verdict === "FAIL" ? h("span", { class: "mark bad" }, "✕") : verdict === "INCONCLUSIVE" ? h("span", { class: "mark info" }, "?") : verdict === "ERROR" ? h("span", { class: "mark warn" }, "!") : h("span", { class: "spinner", style: "color:var(--brand)" });
+  box.replaceChildren(
+    h("h1", {}, t("r_title")),
+    h("p", { class: "lead" }, done.length < total ? t("r_running", { a: String(done.length + 1 > total ? total : done.length + 1), b: String(total) }) : t("r_done")),
+    done.length < total ? h("p", { class: "hint", style: "margin-top:-6px" }, t("r_wait")) : "",
+    h("div", { style: "display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:12px" },
+      h("span", { class: "big", style: `color:${fail || err ? "var(--bad)" : "var(--ok)"}` }, `${pass}/${total}`),
+      h("span", { style: "font-weight:600" }, t("r_summary_ok", { a: String(pass), b: String(total) })),
+      fail ? h("span", { class: "pill bad" }, t(fail === 1 ? "r_failed1" : "r_failed", { n: String(fail) })) : "", unsure ? h("span", { class: "pill info" }, t("r_unsure", { n: String(unsure) })) : "", err ? h("span", { class: "pill warn" }, t("r_err", { n: String(err) })) : ""),
+    h("div", { class: "bar", "aria-hidden": "true" }, h("span", { style: `width:${pct(pass)};background:var(--ok)` }), h("span", { style: `width:${pct(fail)};background:var(--bad)` }), h("span", { style: `width:${pct(unsure)};background:var(--info)` }), h("span", { style: `width:${pct(err)};background:var(--warn)` })),
+    ...[...groups.entries()].map(([sid, list]) => h("div", { style: "margin-top:20px" }, h("h2", {}, S.runTitles?.[sid] || sid),
+      h("div", { class: "runs" }, ...list.map(({ r, i, id }) => h("button", { type: "button", class: "run", onclick: () => { S.view = "run"; S.runDetail = id; history.pushState({}, "", `/run/${id}`); render(); } },
+        icon(v(r)), h("div", { class: "grow" }, h("div", { style: "font-weight:600" }, `${t("r_run_of")} ${i + 1} · ${v(r) ? t("v_" + v(r)) : t("v_running")}`), h("div", { class: "sub" }, r.record?.finalMessage ? `“${r.record.finalMessage}”` : r.error || "")),
+        h("span", { class: "muted small" }, t("r_open"), " →")))))),
+    h("div", { class: "actions" }, h("button", { type: "button", class: "btn", onclick: () => { S.step = 3; render(); } }, t("r_again")), h("span", { class: "spacer" }), h("button", { type: "button", class: "btn primary", onclick: () => { S.step = 2; S.plan = null; render(); } }, t("r_new"))));
 }
 
-// ---------------------------------------------------------------- runs and gate
-async function viewRuns(m) {
-  const runs = await call("GET", "/api/runs");
-  m.append(h("div", { class: "panel" }, h("table", {}, h("tr", {}, h("th", {}, "Started"), h("th", {}, "Scenario"), h("th", {}, "Agent"), h("th", {}, "Verdict"), h("th", {}, "Reason")),
-    runs.map((r) => h("tr", {}, h("td", { class: "small" }, h("a", { href: `/run/${r.runId}`, onclick: (e) => { e.preventDefault(); go("run", r.runId); } }, r.startedAt)), h("td", {}, r.scenarioId), h("td", { class: "small" }, `${r.agent.label} @ ${r.agent.version}`), h("td", {}, badge(r.verdict)), h("td", { class: "small" }, r.reason))))));
+// ---------------------------------------------------------------- run detail
+async function viewRunDetail(m, id) {
+  const box = h("section", { class: "card" }); m.append(box);
+  for (;;) {
+    let d; try { d = await call("GET", `/api/runs/${id}`); } catch (e) { box.replaceChildren(h("div", { class: "notice bad" }, e.message)); return; }
+    if (S.view !== "run" || S.runDetail !== id) return;
+    paintDetail(box, d);
+    if (d.status === "done") return;
+    await new Promise((r) => setTimeout(r, 1000));
+  }
 }
-function viewGate(m) {
-  const b = h("input", { value: "scripted-v1" }); const c = h("input", { value: "scripted-v2" }); const n = h("input", { type: "number", min: 1, value: 1 }); const out = h("div");
-  m.append(h("div", { class: "panel" }, h("p", { class: "muted" }, "Compares saved runs by agent version label. Counts are observed outcomes, not reliability guarantees."),
-    h("div", { class: "row" }, h("div", {}, h("label", {}, "Baseline version"), b), h("div", {}, h("label", {}, "Candidate version"), c), h("div", {}, h("label", {}, "Mandatory runs per scenario"), n)),
-    h("button", { class: "primary", onclick: async () => {
+function paintDetail(box, d) {
+  const r = d.record;
+  const back = h("button", { type: "button", class: "btn small", onclick: () => { history.back(); } }, "← ", t("back"));
+  if (!r) { box.replaceChildren(back, h("p", {}, d.error || t("v_running"))); return; }
+  const cls = { PASS: "ok", FAIL: "bad", INCONCLUSIVE: "info", ERROR: "warn" }[r.verdict];
+  const ev = Object.fromEntries(r.evidence.map((e) => [e.id, e]));
+  const checkLi = (c) => {
+    const def = (r.checks || []).find((x) => x.checkId === c.checkId);
+    const m = c.status === "pass" ? h("span", { class: "mark ok" }, "✓") : c.status === "fail" ? h("span", { class: "mark bad" }, "✕") : h("span", { class: "mark info" }, "?");
+    const name = ({ email_received: "ck_email", order_exists: "ck_order", payment_exists: "ck_payment", claim_matches_external_state: "ck_claim" })[c.type];
+    return h("li", {}, m, h("div", {}, h("div", {}, name ? t(name + "_" + (c.status === "pass" ? "ok" : c.status === "fail" ? "bad" : "na")) : c.checkId), h("div", { class: "muted small" }, c.reason)));
+  };
+  box.replaceChildren(back,
+    h("div", { class: "notice " + cls, style: "font-size:18px" }, h("b", {}, t("v_" + r.verdict)), " — ", t("why_" + r.verdict)), h("p", { class: "muted small" }, r.reason),
+    h("p", { class: "muted small" }, `${S.runTitles?.[r.scenarioId] || r.scenarioId} · ${r.agent.label} · ${new Date(r.startedAt).toLocaleString(lang)} · ref ${r.ref || ""}`),
+    h("div", { class: "cols" },
+      h("div", {}, h("h2", {}, t("r_said")), h("div", { class: "bubble" }, r.finalMessage || t("r_nomsg"))),
+      h("div", {}, h("h2", {}, t("r_proved")), h("ul", { class: "clean" }, ...r.checks.map(checkLi)))),
+    h("details", {}, h("summary", {}, t("r_evidence")), ...r.checks.flatMap((c) => c.evidenceRefs.map((id) => h("div", {}, h("div", { class: "small" }, ev[id]?.summary || id), h("pre", {}, JSON.stringify(ev[id]?.data ?? {}, null, 1)))))));
+}
+
+// ---------------------------------------------------------------- connections
+async function viewConnections(m) {
+  const card = h("section", { class: "card" }, h("h1", {}, t("c_title")), h("p", { class: "lead" }, t("c_lead")));
+  m.append(card);
+  const q = new URLSearchParams(location.search);
+  if (q.get("error")) card.append(h("div", { class: "notice bad" }, q.get("error")));
+  if (q.get("connected")) card.append(h("div", { class: "notice ok" }, "✓ ", q.get("connected")));
+  const list = h("div", { class: "runs" }); card.append(list, h("div", { class: "actions" }, h("button", { type: "button", class: "btn primary", onclick: () => openConnect() }, "+ ", t("c_add"))));
+  let data; try { data = await call("GET", "/api/connections"); } catch (e) { list.append(h("div", { class: "notice bad" }, e.message)); return; }
+  if (!data.connections.length) list.append(h("p", { class: "muted" }, t("c_none")));
+  for (const c of data.connections) {
+    const ok = c.status.state === "VERIFIED";
+    list.append(h("div", { class: "run", style: "cursor:default" }, h("span", { class: "mark " + (ok ? "ok" : "bad") }, ok ? "✓" : "!"),
+      h("div", { class: "grow" }, h("div", { style: "font-weight:600" }, c.name), h("div", { class: "sub" }, `${ok ? t("c_ok") : t("c_bad")} · ${c.status.detail}`)),
+      h("button", { type: "button", class: "btn small", onclick: async (e) => { e.target.disabled = true; await call("POST", `/api/connections/${c.id}/test`).catch(() => {}); render(); } }, t("c_test")),
+      h("button", { type: "button", class: "btn small", style: "color:var(--bad)", onclick: async () => { if (confirm(t("c_confirm"))) { await call("DELETE", `/api/connections/${c.id}`); render(); } } }, t("c_del"))));
+  }
+}
+async function openConnect(kind) {
+  const dlg = $("#dlg"), body = $("#dlg-body");
+  let cat = { googleOAuthConfigured: false }; try { cat = await call("GET", "/api/connections/catalog"); } catch {}
+  const close = () => dlg.close();
+  const pickList = () => {
+    const opt = (key, icon, title, desc, onclick) => h("button", { type: "button", class: "choice", onclick }, h("span", { class: "ic" }, svg(ICON[icon])), h("div", {}, h("b", {}, t(title)), h("span", {}, t(desc))));
+    body.replaceChildren(h("h2", {}, t("c_pick")),
+      h("div", { style: "display:flex;flex-direction:column;gap:10px;margin-top:12px" },
+        ...(kind && kind !== "email" ? [] : [opt("gmail", "mail", "c_gmail", "c_gmail_d", () => form("gmail")), opt("inbox", "mail", "c_inbox", "c_inbox_d", () => form("inbox"))]),
+        ...(kind && kind !== "payment" ? [] : [opt("stripe", "plug", "c_stripe", "c_stripe_d", () => form("stripe"))]),
+        opt("other", "plug", "c_other", "c_other_d", () => { location.href = "/advanced"; })),
+      h("div", { class: "actions" }, h("span", { class: "spacer" }), h("button", { type: "button", class: "btn", onclick: close }, t("c_cancel"))));
+  };
+  const field = (id, label, attrs = {}) => { const i = h("input", { id, ...attrs }); return [h("label", { for: id }, label), i, i]; };
+  const form = (type) => {
+    const out = h("div", { "aria-live": "polite" }); const parts = []; const get = {};
+    if (type === "gmail" && cat.googleOAuthConfigured) {
+      body.replaceChildren(h("h2", {}, t("c_gmail")), h("p", { class: "muted" }, t("c_gmail_d")), h("div", { class: "actions" }, h("a", { class: "btn primary", href: "/api/oauth/google/start" }, t("c_google")), h("button", { type: "button", class: "btn", onclick: pickList }, t("back"))));
+      return;
+    }
+    if (type === "gmail") {
+      parts.push(h("p", { class: "muted small" }, t("c_google_off")));
+      for (const [k, l, a] of [["clientId", "c_cid", {}], ["clientSecret", "c_secret", { type: "password" }], ["refreshToken", "c_rtoken", { type: "password" }]]) { const [lab, , i] = field("cf-" + k, t(l), a); parts.push(lab, i); get[k] = i; }
+    } else if (type === "inbox") {
+      for (const [k, l, a] of [["name", "c_name", { value: "Buzón QA" }], ["url", "c_url", { placeholder: "https://…/inbox?q={ref}" }], ["token", "c_token", { type: "password" }], ["items", "c_list", { value: "emails" }]]) { const [lab, , i] = field("cf-" + k, t(l), a); parts.push(lab, i); get[k] = i; }
+    } else {
+      for (const [k, l, a] of [["apiKey", "c_key", { type: "password", placeholder: "rk_test_…" }]]) { const [lab, , i] = field("cf-" + k, t(l), a); parts.push(lab, i); get[k] = i; }
+    }
+    const saveBtn = h("button", { type: "button", class: "btn primary", onclick: async () => {
+      saveBtn.disabled = true; out.replaceChildren(h("div", { class: "notice neutral", style: "display:flex;gap:10px;align-items:center" }, h("span", { class: "spinner" }), t("c_saving")));
+      const v = (k) => get[k].value.trim();
+      const reqBody = type === "gmail" ? { type: "gmail", clientId: v("clientId"), clientSecret: v("clientSecret"), refreshToken: v("refreshToken") }
+        : type === "stripe" ? { type: "stripe_test", apiKey: v("apiKey") }
+        : { type: "http_json", name: v("name") || "Buzón QA", kind: "email", url: v("url"), itemsPath: v("items") || undefined, fields: { id: "id", to: "to", from: "from", subject: "subject", body: "body", date: "date" }, ...(v("token") ? { headerName: "Authorization", headerValue: `Bearer ${v("token")}`, healthUrl: v("url").split("?")[0].replace(/\/[^/]*$/, "/health") } : {}) };
       try {
-        const g = await call("POST", "/api/gate", { baseline: b.value, candidate: c.value, runsPerScenario: Number(n.value) });
-        const cls = g.decision === "READY TO RELEASE" ? "READY" : g.decision === "BLOCKED" ? "BLOCKED" : "REVIEW";
-        const fc = (x) => ["PASS", "FAIL", "ERROR", "INCONCLUSIVE"].filter((v) => x[v]).map((v) => `${x[v]}/${x.total} ${v}`).join(" · ") || "no runs";
-        out.replaceChildren(h("div", { class: `banner ${cls}` }, `${g.decision} — ${g.reason}`),
-          h("table", {}, h("tr", {}, h("th", {}, "Scenario"), h("th", {}, "Baseline"), h("th", {}, "Candidate"), h("th", {}, "Status"), h("th", {}, "Evidence")),
-            g.rows.map((r) => h("tr", {}, h("td", {}, r.scenarioId), h("td", {}, fc(r.baseline)), h("td", {}, fc(r.candidate)), h("td", {}, badge(r.status.toUpperCase(), r.status === "ok" ? "PASS" : r.status === "blocked" ? "FAIL" : "INCONCLUSIVE"), h("div", { class: "small" }, r.why)),
-              h("td", { class: "small" }, ...r.evidence.map((e) => h("div", {}, `${e.side}: `, h("a", { href: `/run/${e.runId}`, onclick: (ev) => { ev.preventDefault(); go("run", e.runId); } }, e.runId.slice(0, 8)), ` ${e.verdict}`)))))),
-          ...g.disclosures.map((d) => h("p", { class: "small muted" }, d)));
-      } catch (e) { out.replaceChildren(h("p", { class: "err" }, e.message)); }
-    } }, "Compute release gate"), out));
+        const c = await call("POST", "/api/connections", reqBody);
+        if (c.status.state === "VERIFIED") {
+          out.replaceChildren(h("div", { class: "notice ok" }, "✓ ", c.name));
+          setTimeout(async () => { close(); if (S.view === "wizard" && S.step === 3) await proposeTests(null, null); else render(); }, 700);
+        } else { out.replaceChildren(h("div", { class: "notice bad" }, c.status.detail)); saveBtn.disabled = false; }
+      } catch (e) { out.replaceChildren(h("div", { class: "notice bad" }, e.message)); saveBtn.disabled = false; }
+    } }, t("c_save"));
+    body.replaceChildren(h("h2", {}, t(type === "gmail" ? "c_gmail" : type === "stripe" ? "c_stripe" : "c_inbox")), ...parts, out,
+      h("div", { class: "actions" }, h("button", { type: "button", class: "btn", onclick: pickList }, "← ", t("back")), h("span", { class: "spacer" }), saveBtn));
+  };
+  pickList();
+  dlg.showModal();
+}
+$("#dlg").addEventListener("click", (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+
+// ---------------------------------------------------------------- history
+async function viewHistory(m) {
+  const card = h("section", { class: "card" }, h("h1", {}, t("h_title")));
+  m.append(card);
+  let runs; try { runs = await call("GET", "/api/runs"); } catch (e) { card.append(h("div", { class: "notice bad" }, e.message)); return; }
+  if (!runs.length) { card.append(h("p", { class: "muted" }, t("h_empty"))); return; }
+  const cls = { PASS: "ok", FAIL: "bad", INCONCLUSIVE: "info", ERROR: "warn" };
+  card.append(h("div", { style: "overflow-x:auto" }, h("table", {}, h("thead", {}, h("tr", {}, h("th", {}, t("h_when")), h("th", {}, t("h_test")), h("th", {}, t("h_agent")), h("th", {}, t("h_res")))),
+    h("tbody", {}, ...runs.map((r) => h("tr", {}, h("td", { class: "small" }, h("a", { href: `/run/${r.runId}`, onclick: (e) => { e.preventDefault(); S.view = "run"; S.runDetail = r.runId; history.pushState({}, "", `/run/${r.runId}`); render(); } }, new Date(r.startedAt).toLocaleString(lang))),
+      h("td", {}, r.scenarioId), h("td", { class: "small" }, r.agent.label), h("td", {}, h("span", { class: "pill " + cls[r.verdict] }, t("v_" + r.verdict)))))))));
 }
 
-(async () => {
-  try { state.meta = await call("GET", "/api/meta"); } catch (e) { $("#main").append(h("p", { class: "err" }, e.message)); return; }
-  $("#meta").textContent = `Agents API: ${state.meta.agentsApi} · judge: ${state.meta.judge.name}${state.meta.privateUrlsAllowed ? " · LOCAL DEV: private agent URLs allowed" : ""}`;
-  paintChrome();
-  const route = () => { const r = /^\/run\/([0-9a-f-]{36})$/.exec(location.pathname); render(r ? "run" : location.pathname === "/connections" ? "connections" : location.pathname === "/design" ? "design" : "connect", r && r[1]); };
-  route();
-  window.addEventListener("popstate", route);
-})();
+// ---------------------------------------------------------------- boot
+function route() {
+  const run = /^\/run\/([0-9a-f-]{36})$/.exec(location.pathname);
+  if (run) { S.view = "run"; S.runDetail = run[1]; }
+  else if (location.pathname === "/connections") S.view = "connections";
+  else S.view = "wizard";
+  render();
+}
+window.addEventListener("popstate", route);
+paintChrome();
+route();
 </script>
 </body>
 </html>

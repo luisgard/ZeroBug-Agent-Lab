@@ -33,6 +33,9 @@ import { AgentsApiPlanner } from "../src/planning/agents-planner.ts";
 import { type AvailableSource, type NeedKind, type Plan, PlanRequestSchema } from "../src/planning/types.ts";
 
 loadLocalEnv();
+// The UI is a local tool: unless this is a public deployment, testing agents on this computer (localhost)
+// is allowed by default. Cloud metadata addresses stay blocked either way.
+if (process.env.ZB_DEPLOYMENT !== "public" && process.env.ZB_ALLOW_PRIVATE_AGENT_URLS === undefined) process.env.ZB_ALLOW_PRIVATE_AGENT_URLS = "1";
 
 const PORT = Number(process.env.ZB_UI_PORT ?? 3001);
 const store = new RunStore();
@@ -71,7 +74,7 @@ const AgentSpec = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("sample"), id: z.enum(Object.keys(SAMPLE_AGENTS) as [SampleAgentId, ...SampleAgentId[]]) }),
   z.strictObject({ kind: z.literal("agents_api"), instructions: z.string().trim().min(1, "Instructions are empty"), model: z.string().optional(), label: z.string().max(80).optional() }),
   z.strictObject({ kind: z.literal("http_bridge"), endpoint: z.string().url(), label: z.string().max(80).optional(), version: z.string().max(80).optional() }),
-  z.strictObject({ kind: z.literal("browser_chat"), url: z.string().url(), inputSelector: z.string().min(1).max(200), sendSelector: z.string().max(200).optional(), replySelector: z.string().min(1).max(200), label: z.string().max(80).optional(), version: z.string().max(80).optional() }),
+  z.strictObject({ kind: z.literal("browser_chat"), url: z.string().url(), inputSelector: z.string().min(1).max(200).optional(), sendSelector: z.string().max(200).optional(), replySelector: z.string().min(1).max(200).optional(), label: z.string().max(80).optional(), version: z.string().max(80).optional() }),
   z.strictObject({ kind: z.literal("blackbox_http"), endpoint: z.string().url(), mapping: Mapping, verifierUrl: z.string().url().optional(), label: z.string().max(80).optional(), version: z.string().max(80).optional() }),
 ]);
 const PlanRun = z.strictObject({
@@ -86,6 +89,7 @@ const PlanRun = z.strictObject({
 const StartRuns = z.strictObject({ agent: AgentSpec, scenarioIds: z.array(z.string()).min(1, "Select at least one scenario"), repeats: z.number().int().min(1).max(10).default(1) });
 const Connect = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("http_bridge"), endpoint: z.string().url() }),
+  z.strictObject({ kind: z.literal("browser_chat"), url: z.string().url(), inputSelector: z.string().max(200).optional(), sendSelector: z.string().max(200).optional(), replySelector: z.string().max(200).optional() }),
   z.strictObject({ kind: z.literal("blackbox_http"), endpoint: z.string().url(), mapping: Mapping, verifierUrl: z.string().url().optional() }),
 ]);
 
@@ -111,7 +115,7 @@ function build(spec: z.infer<typeof AgentSpec>): { runner: AgentRunner; agent: A
       };
     case "browser_chat":
       return {
-        runner: new BrowserChatRunner({ url: spec.url, inputSelector: spec.inputSelector, replySelector: spec.replySelector, ...(spec.sendSelector ? { sendSelector: spec.sendSelector } : {}), policy }),
+        runner: new BrowserChatRunner({ url: spec.url, ...(spec.inputSelector ? { inputSelector: spec.inputSelector } : {}), ...(spec.replySelector ? { replySelector: spec.replySelector } : {}), ...(spec.sendSelector ? { sendSelector: spec.sendSelector } : {}), policy }),
         agent: { id: "browser-chat", label: spec.label ?? `Browser chat ${spec.url}`, version: spec.version ?? "unversioned", endpoint: spec.url },
       };
     case "blackbox_http": {
@@ -156,6 +160,15 @@ async function api(method: string, path: string, body: unknown): Promise<unknown
     const c = parse(Connect, body);
     const policy = policyFromEnv();
     if (c.kind === "http_bridge") return connectBridge({ endpoint: c.endpoint, bridge, policy });
+    if (c.kind === "browser_chat") {
+      const runner = new BrowserChatRunner({ url: c.url, policy, ...(c.inputSelector ? { inputSelector: c.inputSelector } : {}), ...(c.sendSelector ? { sendSelector: c.sendSelector } : {}), ...(c.replySelector ? { replySelector: c.replySelector } : {}) });
+      const runId = newRunId();
+      const r = await runner.run(
+        { runId, task: "Hola, esto es una prueba de conexión de ZeroBug. Responde con un saludo corto. / Hi, this is a ZeroBug connection test. Reply with a short greeting.", tools: [], callTool: async () => ({ success: false, error: "no tools" }), limits: { maxToolCalls: 1, maxSeconds: 45 } },
+        () => {},
+      );
+      return { mode: "browser_chat", endpoint: c.url, smoke: { ok: r.status === "completed" && !!r.finalMessage, runId, finalMessage: r.finalMessage, status: r.status, toolCallsObserved: 0, ...(r.reason ? { reason: r.reason } : {}) } };
+    }
     const readToken = process.env.ZB_VERIFIER_READ_TOKEN;
     return connectBlackBox({ endpoint: c.endpoint, mapping: c.mapping, policy, ...(c.verifierUrl && readToken ? { externalOutbox: { url: c.verifierUrl, readToken, fetch: { policy } } } : {}) });
   }
@@ -278,6 +291,7 @@ function parse<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<T> {
 }
 
 const pageUrl = new URL("../ui/index.html", import.meta.url);
+const advancedUrl = new URL("../ui/advanced.html", import.meta.url);
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", "http://ui.local");
@@ -289,6 +303,10 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/connections" || url.pathname === "/design" || url.pathname.startsWith("/run/"))) {
       res.writeHead(200, { "content-type": "text/html; charset=utf-8", "content-security-policy": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'" });
       return res.end(readFileSync(pageUrl, "utf8"));
+    }
+    if (req.method === "GET" && url.pathname === "/advanced") {
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8", "content-security-policy": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'" });
+      return res.end(readFileSync(advancedUrl, "utf8"));
     }
     if (req.method === "GET" && url.pathname === "/api/oauth/google/start") {
       try {
