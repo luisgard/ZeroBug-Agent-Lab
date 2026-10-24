@@ -18,6 +18,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: npm ci
+      - run: npx playwright install --with-deps chromium
       - run: npm run typecheck
       - run: npm test
       - name: Install the independent example agent
@@ -38,5 +39,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npx playwright install chromium
       - run: npm run typecheck
       - run: npm test
