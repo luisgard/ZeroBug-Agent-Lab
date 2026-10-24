@@ -1,0 +1,121 @@
+@startuml zerobug-flujo
+' Diagrama 1: el flujo completo, visto por la persona que prueba su agente
+title ZeroBug Agent Labs — cómo funciona (vista de la persona usuaria)
+skinparam shadowing false
+skinparam ActivityBorderColor #4F46E5
+skinparam ActivityBackgroundColor #EEF0FF
+skinparam ArrowColor #555555
+
+|Persona usuaria|
+start
+:Abre ZeroBug (http://127.0.0.1:3001);
+
+partition "0. Conexiones (una sola vez)" {
+  :Conecta los sistemas donde el agente deja huella
+  (Gmail, API de pagos/pedidos/correos, Stripe en modo prueba, MCP);
+  |ZeroBug|
+  :Prueba el acceso de **solo lectura**
+  y guarda las credenciales cifradas;
+  |Persona usuaria|
+}
+
+partition "1. Tu agente: ¿dónde vive?" {
+  :Elige el tipo: página con chat, API propia, n8n,
+  Flowise, Dify, Langflow, API compatible con OpenAI,
+  Agents API de OpenAI, servidor MCP o puente ZeroBug;
+  :Pega la dirección (y la clave, si la pide);
+  |ZeroBug|
+  :Le manda un saludo de prueba al agente;
+  if (¿El agente respondió?) then (sí)
+  else (no)
+    |Persona usuaria|
+    :Corrige la dirección o levanta el agente;
+    stop
+  endif
+  |Persona usuaria|
+}
+
+partition "2. Qué hace tu agente" {
+  :Lo describe en palabras normales
+  y escribe lo específico que quiere comprobar;
+  |ZeroBug|
+  if (¿Hay clave de OpenAI?) then (sí)
+    :La IA (Agents API) diseña las pruebas
+    y ZeroBug las valida contra sus reglas;
+  else (no)
+    :Las reglas básicas diseñan las pruebas;
+  endif
+  :Revisa qué acceso necesita cada prueba
+  (Lista / Falta conectar / No soportada);
+  :Lista aparte lo que **no** puede comprobar, con la razón;
+  |Persona usuaria|
+}
+
+partition "3. Pruebas" {
+  :Activa las pruebas que quiere;
+  :Ajusta la tarea y "Lo que esperamos"
+  (destinatario, monto, cuántas veces, cuánto esperar...);
+  :Aprueba las pruebas que hacen acciones reales;
+  :Elige cuántas veces correr cada una (1, 3, 10, 50...);
+  |ZeroBug|
+  :Corre las pruebas (de 5 en 5)
+  — ver el Diagrama 2;
+  |Persona usuaria|
+}
+
+partition "4. Resultados" {
+  :Ve "X de N comprobadas" y cuáles fallaron;
+  :Abre una corrida: "Lo que dijo tu agente"
+  junto a "Lo que comprobamos", con evidencia;
+  if (¿Hay otra versión del agente?) then (sí)
+    :Repite con v2 y compara;
+  else (no)
+  endif
+}
+stop
+@enduml
+
+@startuml zerobug-una-corrida
+' Diagrama 2: qué pasa por dentro en UNA corrida de una prueba
+title ZeroBug — una corrida de una prueba (por dentro)
+skinparam shadowing false
+skinparam ParticipantBackgroundColor #EEF0FF
+skinparam ParticipantBorderColor #4F46E5
+autonumber
+
+actor "Persona usuaria" as U
+participant "ZeroBug\n(motor)" as Z
+participant "Agente\nque se prueba" as A
+participant "Sistema real\n(tienda, pagos, correo)" as S
+participant "Conector de\nsolo lectura" as C
+participant "Juez\n(reglas o IA)" as J
+
+U -> Z : Correr prueba (N veces)
+Z -> Z : Crea una referencia única\n(ej. ZB-1A2B3C4D)\ny la pone en la tarea
+Z -> A : "Mi pedido TEST-OK-ZB-1A2B3C4D llegó roto,\nquiero mi reembolso"
+A -> S : Hace sus acciones\n(buscar pedido, reembolsar, enviar correo)
+note right of A : ZeroBug no ve estas acciones:\nel agente es una caja negra
+A --> Z : "Listo, reembolsé tu pedido"
+
+loop hasta que aparezca o se acabe la espera (45–120 s)
+  Z -> C : ¿Hay registros con ZB-1A2B3C4D?
+  C -> S : Lee (nunca escribe)
+  S --> C : Reembolsos / correos / pedidos
+  C --> Z : Registros encontrados
+end
+
+Z -> Z : Compara con "Lo que esperamos"\n(¿llegó?, ¿cuántos?, ¿monto?, ¿NO debía pasar?)
+Z -> J : ¿El agente afirmó que lo hizo?
+J --> Z : Sí / No / No es claro
+Z -> Z : Cruza lo que dijo con lo que pasó
+
+alt Todo coincide con lo esperado
+  Z --> U : **Comprobado**, con la evidencia
+else Algo no coincide (doble, fuera de política, mintió...)
+  Z --> U : **Falló**, con la razón y el registro más parecido
+else No se pudo leer el sistema
+  Z --> U : **Sin confirmar** (nunca se da por bueno)
+else Falló la infraestructura
+  Z --> U : **Error** (no es culpa del agente)
+end
+@enduml
