@@ -102,6 +102,8 @@ Textos listos para el paso 2:
 
 ## Si algo sale distinto
 
+- **El agente responde "Este agente necesita OPENAI_API_KEY"**: mira la ventana de ShopZ. Al arrancar dice `OpenAI: clave encontrada en …` o `OpenAI: NO encontré OPENAI_API_KEY. Busqué en: …`. Revisa que `.env.local` esté en **esa** carpeta (si descomprimiste un zip nuevo, cópialo ahí) y que se llame exactamente `.env.local`. En Windows, en el Explorador activa *Ver → Extensiones de nombre de archivo* para ver si se llama `.env.local.txt`. Después de cambiarlo, cierra ShopZ con Ctrl+C y vuelve a arrancarlo.
+
 - **"Error del modelo…"**: tu clave no tiene acceso a `gpt-4o-mini`. Agrega `ZB_DEMO_MODEL=<un modelo de tu cuenta>` a `.env.local` y reinicia la ventana 1.
 - **La v1 falla alguna**: un modelo real no es 100 % predecible. Abre el detalle y léelo: ese es justo el valor de ZeroBug. Si el correo no trae el número de pedido, ZeroBug no puede ligarlo a la prueba y lo marca como no llegado.
 - **"La IA no logró proponer pruebas válidas"**: pasa si quitaste `ZB_PLANNER=rules`. ZeroBug usa las reglas básicas y te muestra abajo por qué rechazó lo de la IA.

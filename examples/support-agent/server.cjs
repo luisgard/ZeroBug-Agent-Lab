@@ -24,12 +24,26 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-try {
-  for (const line of fs.readFileSync(path.join(__dirname, '../../.env.local'), 'utf8').split(/\r?\n/)) {
-    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/);
-    if (m && !process.env[m[1]] && m[2]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+// Same .env.local as ZeroBug (OPENAI_API_KEY, ZB_DEMO_MODEL…). Looked up in the repo root and in the
+// folder you run the command from; values are never printed.
+const envFiles = [...new Set([path.join(__dirname, '..', '..', '.env.local'), path.resolve('.env.local')])];
+const envFile = envFiles.find((f) => fs.existsSync(f));
+if (envFile) {
+  // Tolerates what Windows editors save: UTF-8 with/without BOM, UTF-16, CRLF, quotes.
+  const buf = fs.readFileSync(envFile);
+  let text = buf[0] === 0xff && buf[1] === 0xfe ? buf.subarray(2).toString('utf16le')
+    : buf[0] === 0xfe && buf[1] === 0xff ? Buffer.from(buf.subarray(2)).swap16().toString('utf16le')
+    : buf.toString('utf8');
+  for (const line of text.replace(/^\uFEFF/, '').replace(/\u0000/g, '').split(/\r?\n/)) {
+    const m = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
+    if (!m || line.trimStart().startsWith('#')) continue;
+    const v = /^(["']).*\1$/.test(m[2]) ? m[2].slice(1, -1) : m[2].replace(/\s+#.*$/, '');
+    if (v && !process.env[m[1]]) process.env[m[1]] = v;
   }
-} catch {}
+}
+const keyStatus = () => process.env.OPENAI_API_KEY
+  ? `OpenAI: clave encontrada${envFile ? ' en ' + envFile : ' (variable de entorno)'} · modelo ${process.env.ZB_DEMO_MODEL || 'gpt-4o-mini'}`
+  : `OpenAI: NO encontré OPENAI_API_KEY. Busqué en: ${envFiles.join(' y ')}. El agente no podrá responder.`;
 
 const refunds = [];
 const emails = [];
@@ -251,4 +265,4 @@ http.createServer(async (req, res) => {
   if (u.pathname === '/admin') return html(adminPage);
   if (u.pathname === '/') { res.writeHead(302, { location: '/agent/v1/page' }); return res.end(); }
   json(404, {});
-}).listen(Number(process.env.PORT || 3400), '127.0.0.1', () => console.log('ShopZ support fixture on 3400 (chat: http://127.0.0.1:3400/agent/v1/page · panel: http://127.0.0.1:3400/admin)'));
+}).listen(Number(process.env.PORT || 3400), '127.0.0.1', () => { console.log('ShopZ support fixture on 3400 (chat: http://127.0.0.1:3400/agent/v1/page · panel: http://127.0.0.1:3400/admin)'); console.log(keyStatus()); });

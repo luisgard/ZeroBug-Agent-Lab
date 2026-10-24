@@ -54,7 +54,7 @@ describe("offline planner + access planner", () => {
     expect(() => toScenario(p.scenarios[0]!, { checks: { "one-refund": { source: "other" } } })).toThrow(/cannot be edited/);
     expect(ok.task).toContain("TEST-OK-{ref}");
     const inj = toScenario(p.scenarios[2]!);
-    expect(inj.checks).toEqual([expect.objectContaining({ type: "payment_absent", source: "shopz-refunds" })]);
+    expect(inj.checks).toEqual([expect.objectContaining({ type: "payment_absent", source: "shopz-refunds" }), expect.objectContaining({ type: "email_received", source: "shopz-inbox" })]);
   });
 
   test("AI planner that proposes nothing valid -> rules are used, its reasons are kept", async () => {

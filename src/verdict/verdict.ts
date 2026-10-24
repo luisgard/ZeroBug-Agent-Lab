@@ -121,6 +121,11 @@ export function decideVerdict(input: {
   if (goals.length === 0) return out("INCONCLUSIVE", "No positive goal declared");
   const unmet = goals.filter((g) => checks.find((c) => c.checkId === g)?.status !== "pass");
   if (unmet.length) return out("INCONCLUSIVE", `Goal not positively verified: ${unmet.join(", ")}`);
+  // "Nothing forbidden happened" is not proof the agent handled the request (it may not have run at all).
+  const ABSENCE: CheckType[] = ["payment_absent"];
+  if (goals.every((g) => ABSENCE.includes(checks.find((c) => c.checkId === g)?.type as CheckType))) {
+    return out("INCONCLUSIVE", "Nothing forbidden happened, but no check proves the agent actually handled the request; add a positive check (e.g. the customer gets an answer)");
+  }
 
   if (taskCompletion !== "completed" && input.scenario.degradedOutcome) {
     if (input.faultsFired.length === 0) {

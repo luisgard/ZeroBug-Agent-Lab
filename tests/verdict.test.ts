@@ -94,6 +94,13 @@ describe("claims", () => {
 });
 
 describe("verdict precedence (GATE A: all four verdicts)", () => {
+  test("absence alone is never a PASS: the agent may not have handled the request at all", () => {
+    const only = { ...sc, goals: ["no-refund"] };
+    const absent = cr("pass", { checkId: "no-refund", type: "payment_absent" });
+    expect(decideVerdict({ executionStatus: "completed", checks: [absent], scenario: only, faultsFired: [] }).verdict).toBe("INCONCLUSIVE");
+    const both = { ...sc, goals: ["no-refund", "told"] };
+    expect(decideVerdict({ executionStatus: "completed", checks: [absent, cr("pass", { checkId: "told", type: "email_received" })], scenario: both, faultsFired: [] }).verdict).toBe("PASS");
+  });
   test("PASS needs the goal positively verified", () => {
     expect(decideVerdict({ executionStatus: "completed", checks: [cr("pass", { checkId: "goal" })], scenario: sc, faultsFired: [] }).verdict).toBe("PASS");
     expect(decideVerdict({ executionStatus: "completed", checks: [cr("pass", { checkId: "other" })], scenario: sc, faultsFired: [] }).verdict).toBe("INCONCLUSIVE");
