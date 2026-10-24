@@ -58,11 +58,18 @@ async function call(method, path, body) {
   return data;
 }
 const state = { meta: null, agent: null, agentLabel: "none selected", scenarios: [], connectTab: "samples", lastRunIds: [] };
-const views = { connect: viewConnect, connections: viewConnections, scenarios: viewScenarios, runs: viewRuns, gate: viewGate };
+const views = { connect: viewConnect, connections: viewConnections, design: viewDesign, scenarios: viewScenarios, runs: viewRuns, gate: viewGate };
 // ---------------------------------------------------------------- i18n (ES / EN)
 const I18N = {
   en: {
-    tagline: "Agents report. ZeroBug proves.", nav_connect: "1 · Connect agent", nav_connections: "2 · Connections", nav_scenarios: "3 · Scenarios & run", nav_runs: "4 · Runs", nav_gate: "5 · Release gate",
+    tagline: "Agents report. ZeroBug proves.", nav_connect: "1 · Connect agent", nav_connections: "2 · Connections", nav_design: "3 · Design tests", nav_scenarios: "4 · Built-in scenarios", nav_runs: "5 · Runs", nav_gate: "6 · Release gate",
+    d_title: "Design tests for your agent", d_sub: "Tell ZeroBug what your agent does. It proposes tests, says which connections it needs, and only runs what can be verified.",
+    d_agent: "Agent", d_noagent: "No agent selected yet: pick one in step 1.", d_desc: "What does your agent do?", d_desc_ph: "e.g. It applies to jobs on LinkedIn for me and emails me a summary.",
+    d_spec: "Anything specific you want us to test? (optional)", d_spec_ph: "e.g. It must never apply twice to the same job.", d_propose: "Propose tests", d_proposing: "Designing tests…",
+    d_planner: "Planner", d_caps: "Detected", d_none: "none", d_include: "Include", d_task: "Task sent to the agent", d_criteria: "What must actually happen", d_needs: "Needs", d_connect_link: "Connect",
+    d_limits: "Limitations", d_approve: "I approve real-world effects for this test", d_repeats: "Runs", d_unsupported: "What ZeroBug cannot verify (yet)", d_run: "Run selected tests",
+    d_risk: "Risk", d_src_AUTO: "Proposed by ZeroBug", d_src_USER: "From your request", d_src_HYBRID: "ZeroBug + your request",
+    r_READY: "READY", r_NEEDS_ACCESS: "NEEDS ACCESS", r_NEEDS_REVIEW: "NEEDS REVIEW", r_UNSUPPORTED: "UNSUPPORTED",
     c_title: "Connections", c_sub: "Connect the apps where your agent leaves a trace. ZeroBug only READS through these connections: it never sends, applies, buys or deletes anything.",
     c_yours: "Your connections", c_none: "No connections yet. Add one from the catalog below.", c_use: "Use in scenarios as", c_test: "Test", c_delete: "Delete", c_checked: "checked",
     c_file: "Configured by the operator (zerobug.sources.json)", c_catalog: "Catalog", c_soon: "Coming soon", c_connect: "Connect", c_google: "Sign in with Google",
@@ -79,7 +86,14 @@ const I18N = {
     verified: "VERIFIED", unavailable: "UNAVAILABLE", confirm_delete: "Delete this connection? Scenarios that use it will become INCONCLUSIVE.", flash_ok: "Connected:", flash_err: "Could not connect:",
   },
   es: {
-    tagline: "Los agentes dicen. ZeroBug comprueba.", nav_connect: "1 · Conectar agente", nav_connections: "2 · Conexiones", nav_scenarios: "3 · Escenarios y ejecución", nav_runs: "4 · Corridas", nav_gate: "5 · Release gate",
+    tagline: "Los agentes dicen. ZeroBug comprueba.", nav_connect: "1 · Conectar agente", nav_connections: "2 · Conexiones", nav_design: "3 · Diseñar pruebas", nav_scenarios: "4 · Escenarios incluidos", nav_runs: "5 · Corridas", nav_gate: "6 · Release gate",
+    d_title: "Diseña pruebas para tu agente", d_sub: "Cuéntale a ZeroBug qué hace tu agente. Propone pruebas, te dice qué conexiones necesita y solo corre lo que se puede verificar.",
+    d_agent: "Agente", d_noagent: "Aún no eliges agente: selecciónalo en el paso 1.", d_desc: "¿Qué hace tu agente?", d_desc_ph: "ej. Se postula a vacantes en LinkedIn por mí y me manda un resumen por correo.",
+    d_spec: "¿Algo específico que quieras comprobar? (opcional)", d_spec_ph: "ej. Nunca debe postularse dos veces a la misma vacante.", d_propose: "Proponer pruebas", d_proposing: "Diseñando pruebas…",
+    d_planner: "Planificador", d_caps: "Detectado", d_none: "nada", d_include: "Incluir", d_task: "Tarea que se le manda al agente", d_criteria: "Qué tiene que pasar de verdad", d_needs: "Necesita", d_connect_link: "Conectar",
+    d_limits: "Limitaciones", d_approve: "Apruebo efectos reales para esta prueba", d_repeats: "Corridas", d_unsupported: "Lo que ZeroBug no puede verificar (todavía)", d_run: "Correr pruebas seleccionadas",
+    d_risk: "Riesgo", d_src_AUTO: "Propuesta por ZeroBug", d_src_USER: "De tu solicitud", d_src_HYBRID: "ZeroBug + tu solicitud",
+    r_READY: "LISTA", r_NEEDS_ACCESS: "FALTA ACCESO", r_NEEDS_REVIEW: "REVISAR", r_UNSUPPORTED: "NO SOPORTADA",
     c_title: "Conexiones", c_sub: "Conecta las apps donde tu agente deja huella. ZeroBug solo LEE con estas conexiones: nunca envía, postula, compra ni borra nada.",
     c_yours: "Tus conexiones", c_none: "Aún no hay conexiones. Agrega una del catálogo de abajo.", c_use: "Úsala en escenarios como", c_test: "Probar", c_delete: "Eliminar", c_checked: "revisada",
     c_file: "Configurada por el operador (zerobug.sources.json)", c_catalog: "Catálogo", c_soon: "Próximamente", c_connect: "Conectar", c_google: "Entrar con Google",
@@ -106,10 +120,10 @@ function paintChrome() {
 }
 function nav(active) {
   const n = $("#nav"); n.replaceChildren();
-  for (const k of ["connect", "connections", "scenarios", "runs", "gate"])
+  for (const k of ["connect", "connections", "design", "scenarios", "runs", "gate"])
     n.append(h("button", { class: active === k ? "on" : "", onclick: () => go(k) }, tr("nav_" + k)));
 }
-function go(view, arg) { history.pushState({}, "", view === "run" ? `/run/${arg}` : view === "connections" ? "/connections" : "/"); render(view, arg); }
+function go(view, arg) { history.pushState({}, "", view === "run" ? `/run/${arg}` : view === "connections" ? "/connections" : view === "design" ? "/design" : "/"); render(view, arg); }
 function render(view, arg) { state.view = view; state.viewArg = arg; nav(view); const m = $("#main"); m.replaceChildren(); (view === "run" ? viewRun : views[view])(m, arg); }
 
 // ---------------------------------------------------------------- connections
@@ -161,6 +175,68 @@ async function viewConnections(m) {
   catalogBox.append(h("div", { class: "panel" }, h("h3", { style: "margin-top:0" }, tr("c_catalog")), chips, formBox, grid));
 }
 
+
+// ---------------------------------------------------------------- design tests (AL-06)
+function describeCheck(c) {
+  const es = lang === "es";
+  switch (c.type) {
+    case "email_received": return (es ? `Llega un correo a ${c.to}` : `An email arrives at ${c.to}`) + (c.subjectContains ? (es ? ` con asunto que contiene “${c.subjectContains}”` : ` with subject containing “${c.subjectContains}”`) : "") + (c.exactly ? (es ? ` — exactamente ${c.exactly}` : ` — exactly ${c.exactly}`) : "") + (c.requireRef === false ? (es ? " (por ventana de tiempo)" : " (by time window)") : "");
+    case "order_exists": return (es ? "Existe el pedido" : "The order exists") + (c.quantity ? ` × ${c.quantity}` : "") + (c.productContains ? ` · ${c.productContains}` : "");
+    case "payment_exists": return (es ? "Existe el cobro" : "The charge exists") + (c.status ? ` · ${c.status}` : "") + (c.amount !== undefined ? ` · ${c.amount}` : "");
+    case "claim_matches_external_state": return (es ? "Lo que el agente afirma coincide con lo comprobado: " : "What the agent claims matches what was proven: ") + c.claim;
+    default: return c.type;
+  }
+}
+function viewDesign(m) {
+  const desc = h("textarea", { id: "d-desc", rows: 3, placeholder: tr("d_desc_ph") }, state.designDesc || "");
+  const spec = h("textarea", { id: "d-spec", rows: 3, placeholder: tr("d_spec_ph") }, state.designSpec || "");
+  const out = h("div"); const err = h("div", { class: "err", role: "alert" });
+  const propose = h("button", { class: "primary", onclick: async () => {
+    err.textContent = ""; state.designDesc = desc.value; state.designSpec = spec.value; propose.disabled = true; out.replaceChildren(h("p", { class: "muted" }, tr("d_proposing")));
+    try { state.plan = await call("POST", "/api/plan", { description: desc.value, specifics: spec.value, lang, agentMode: state.agent?.kind === "browser_chat" ? "WEB_UI" : state.agent?.kind === "http_bridge" ? "BRIDGE" : state.agent?.kind === "sample" ? "SAMPLE" : "HTTP_API" }); paintPlan(out); }
+    catch (e) { out.replaceChildren(); err.textContent = e.message; }
+    propose.disabled = false;
+  } }, tr("d_propose"));
+  m.append(h("div", { class: "panel" }, h("h2", { style: "margin:0 0 6px" }, tr("d_title")), h("p", { class: "muted", style: "margin:0" }, tr("d_sub")),
+    h("p", { class: "small" }, tr("d_agent"), ": ", state.agent ? h("b", {}, state.agentLabel) : h("span", { class: "err" }, tr("d_noagent"))),
+    h("label", { for: "d-desc" }, tr("d_desc")), desc, h("label", { for: "d-spec" }, tr("d_spec")), spec, propose, err), out);
+  if (state.plan) paintPlan(out);
+}
+function paintPlan(out) {
+  const p = state.plan; const items = new Map();
+  const readyCls = { READY: "VERIFIED", NEEDS_ACCESS: "FAIL", NEEDS_REVIEW: "INCONCLUSIVE", UNSUPPORTED: "UNSUPPORTED" };
+  const cards = p.scenarios.map((s) => {
+    const include = h("input", { type: "checkbox", id: `inc-${s.id}`, style: "width:auto" }); include.checked = s.readiness === "READY";
+    if (s.readiness !== "READY") include.disabled = true;
+    const task = h("textarea", { id: `task-${s.id}`, rows: 2 }, s.task);
+    const repeats = h("input", { type: "number", id: `rep-${s.id}`, min: 1, max: 100, value: 1, style: "max-width:120px" });
+    const approve = s.approvalRequired ? h("input", { type: "checkbox", id: `ap-${s.id}`, style: "width:auto" }) : null;
+    items.set(s.id, { include, task, repeats, approve });
+    return h("div", { class: "panel", style: "display:flex;flex-direction:column;gap:6px" },
+      h("div", { style: "display:flex;gap:10px;align-items:center;flex-wrap:wrap" }, include, h("label", { for: `inc-${s.id}`, style: "margin:0;font-size:16px;color:var(--text);font-weight:600" }, s.title),
+        badge(tr("r_" + s.readiness), readyCls[s.readiness]), h("span", { class: "small muted" }, tr("d_src_" + s.source), " · ", tr("d_risk"), " ", s.risk)),
+      h("div", { class: "small muted" }, s.readinessReason),
+      h("label", { for: `task-${s.id}` }, tr("d_task")), task,
+      h("label", {}, tr("d_criteria")), h("ul", { style: "margin:0;padding-left:20px" }, ...s.checks.map((c) => h("li", { class: "small" }, describeCheck(c), c.critical ? h("span", { class: "muted" }, " · critical") : ""))),
+      h("div", { class: "small" }, tr("d_needs"), ": ", ...s.needs.map((n) => h("span", {}, `${tr("k_" + n.kind)} — ${n.why} `, s.assignments[n.kind] ? h("code", {}, `source: ${s.assignments[n.kind]}`) : h("a", { href: "/connections", onclick: (e) => { e.preventDefault(); go("connections"); } }, tr("d_connect_link"))))),
+      s.limitations.length ? h("div", { class: "small", style: "color:var(--err)" }, tr("d_limits"), ": ", s.limitations.join(" · ")) : "",
+      approve ? h("div", { style: "display:flex;gap:8px;align-items:center" }, approve, h("label", { for: `ap-${s.id}`, style: "margin:0;color:var(--err)" }, tr("d_approve"))) : "",
+      h("div", { style: "display:flex;gap:8px;align-items:center" }, h("label", { for: `rep-${s.id}`, style: "margin:0" }, tr("d_repeats")), repeats));
+  });
+  const err = h("div", { class: "err", role: "alert" });
+  const run = h("button", { class: "primary", onclick: async () => {
+    err.textContent = "";
+    if (!state.agent) { err.textContent = tr("d_noagent"); return; }
+    const sel = p.scenarios.filter((s) => items.get(s.id).include.checked).map((s) => { const it = items.get(s.id); return { scenarioId: s.id, task: it.task.value, repeats: Number(it.repeats.value) || 1, approved: it.approve ? it.approve.checked : false }; });
+    try { const r = await call("POST", "/api/plan/run", { planId: p.planId, agent: state.agent, items: sel }); state.lastRunIds = r.runIds; go("run", r.runIds[0]); }
+    catch (e) { err.textContent = e.message; }
+  } }, tr("d_run"));
+  out.replaceChildren(
+    h("div", { class: "panel small" }, tr("d_planner"), ": ", h("b", {}, p.planner.name), " — ", p.planner.note, " · ", tr("d_caps"), ": ", p.capabilitiesDetected.join(", ") || tr("d_none")),
+    ...cards,
+    p.unsupported.length ? h("div", { class: "panel" }, h("h3", { style: "margin-top:0" }, tr("d_unsupported")), h("ul", { style: "margin:0;padding-left:20px" }, ...p.unsupported.map((u) => h("li", { class: "small" }, h("b", {}, u.text), " — ", u.why)))) : "",
+    p.scenarios.length ? h("div", { class: "panel" }, run, err) : "");
+}
 let fieldSeq = 0;
 function field(labelKey, input) { const id = `f-${++fieldSeq}`; input.id = id; return h("div", {}, h("label", { for: id }, tr(labelKey)), input); }
 function openForm(type, box) {
@@ -201,7 +277,7 @@ function openForm(type, box) {
       else body = { type, name: v("name"), url: v("url"), kind: v("kind"), tool: v("tool"), args: json("args"), parse: v("mode") === "json" ? { mode: "json", fields: json("fields"), ...(v("itemsPath") ? { itemsPath: v("itemsPath") } : {}) } : { mode: "text" }, ...(v("authorization") ? { authorization: v("authorization") } : {}) };
       const c = await call("POST", "/api/connections", body);
       out.replaceChildren(badge(c.status.state === "VERIFIED" ? tr("verified") : tr("unavailable"), c.status.state === "VERIFIED" ? "VERIFIED" : "FAIL"), " ", c.status.state === "VERIFIED" ? tr("c_saved") : tr("c_saved_bad"), ": ", c.status.detail, " · ", h("code", {}, `source: ${c.slug}`));
-      setTimeout(() => render("connections"), c.status.state === "VERIFIED" ? 1200 : 3500);
+      setTimeout(() => { if (state.view === "connections") render("connections"); }, c.status.state === "VERIFIED" ? 1200 : 3500);
     } catch (e) { out.className = "small err"; out.textContent = e.message; save.disabled = false; }
   } }, tr("c_save"));
   const cancel = h("button", { style: "margin-left:8px;min-height:36px;border:1px solid var(--line);border-radius:6px;background:none;color:var(--text);cursor:pointer;padding:6px 12px", onclick: () => box.replaceChildren() }, tr("c_cancel"));
@@ -354,7 +430,7 @@ function viewGate(m) {
   try { state.meta = await call("GET", "/api/meta"); } catch (e) { $("#main").append(h("p", { class: "err" }, e.message)); return; }
   $("#meta").textContent = `Agents API: ${state.meta.agentsApi} · judge: ${state.meta.judge.name}${state.meta.privateUrlsAllowed ? " · LOCAL DEV: private agent URLs allowed" : ""}`;
   paintChrome();
-  const route = () => { const r = /^\/run\/([0-9a-f-]{36})$/.exec(location.pathname); render(r ? "run" : location.pathname === "/connections" ? "connections" : "connect", r && r[1]); };
+  const route = () => { const r = /^\/run\/([0-9a-f-]{36})$/.exec(location.pathname); render(r ? "run" : location.pathname === "/connections" ? "connections" : location.pathname === "/design" ? "design" : "connect", r && r[1]); };
   route();
   window.addEventListener("popstate", route);
 })();

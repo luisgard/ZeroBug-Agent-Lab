@@ -28,6 +28,9 @@ import { SourceRegistry } from "../src/connectors/registry.ts";
 import { BrowserChatRunner } from "../src/runner/browser.ts";
 import { ConnectionError, ConnectionService } from "../src/connections/service.ts";
 import { SecretBox } from "../src/connections/secret-box.ts";
+import { buildPlan, planAccess, toScenario } from "../src/planning/plan.ts";
+import { AgentsApiPlanner } from "../src/planning/agents-planner.ts";
+import { type AvailableSource, type NeedKind, type Plan, PlanRequestSchema } from "../src/planning/types.ts";
 
 loadLocalEnv();
 
@@ -40,6 +43,25 @@ const evidenceSources = SourceRegistry.load();
 const connections = new ConnectionService(SecretBox.fromEnvOrFile(), { policy: () => policyFromEnv(), ...(process.env.ZB_CONNECTIONS_FILE ? { file: process.env.ZB_CONNECTIONS_FILE } : {}) });
 const PUBLIC_URL = process.env.ZB_PUBLIC_URL ?? `http://127.0.0.1:${PORT}`;
 const GOOGLE_REDIRECT = `${PUBLIC_URL}/api/oauth/google/callback`;
+const plans = new Map<string, Plan>();
+/** What the access planner may use: real connections (with their tested state) + operator sources. */
+function availableSources(): AvailableSource[] {
+  const fromConnections = connections.list().map((c) => ({
+    name: c.slug,
+    provides: c.provides as NeedKind[],
+    verified: c.status.state === "VERIFIED",
+    ...(typeof c.config.account === "string" ? { account: c.config.account } : {}),
+    origin: "connection" as const,
+  }));
+  const fromFile = (evidenceSources?.names() ?? []).flatMap((n) => {
+    try {
+      return [{ name: n, provides: evidenceSources!.get(n).provides as NeedKind[], verified: false, origin: "file" as const }];
+    } catch {
+      return [];
+    }
+  });
+  return [...fromConnections, ...fromFile];
+}
 /** Evidence sources for a run: operator file + connections added in the UI. */
 const runSources = () => (evidenceSources ?? SourceRegistry.empty()).withExtra(connections.sources());
 const judge = process.env.ZB_JUDGE === "decisions" && hasKey ? new DecisionsJudge(new OpenAI()) : new HeuristicJudge();
@@ -52,6 +74,15 @@ const AgentSpec = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("browser_chat"), url: z.string().url(), inputSelector: z.string().min(1).max(200), sendSelector: z.string().max(200).optional(), replySelector: z.string().min(1).max(200), label: z.string().max(80).optional(), version: z.string().max(80).optional() }),
   z.strictObject({ kind: z.literal("blackbox_http"), endpoint: z.string().url(), mapping: Mapping, verifierUrl: z.string().url().optional(), label: z.string().max(80).optional(), version: z.string().max(80).optional() }),
 ]);
+const PlanRun = z.strictObject({
+  planId: z.string().min(8).max(40),
+  agent: AgentSpec,
+  items: z
+    .array(z.strictObject({ scenarioId: z.string(), task: z.string().max(2000).optional(), repeats: z.number().int().min(1).max(100).default(1), approved: z.boolean().default(false) }))
+    .min(1, "Select at least one test")
+    .max(20),
+});
+
 const StartRuns = z.strictObject({ agent: AgentSpec, scenarioIds: z.array(z.string()).min(1, "Select at least one scenario"), repeats: z.number().int().min(1).max(10).default(1) });
 const Connect = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("http_bridge"), endpoint: z.string().url() }),
@@ -128,6 +159,58 @@ async function api(method: string, path: string, body: unknown): Promise<unknown
     const readToken = process.env.ZB_VERIFIER_READ_TOKEN;
     return connectBlackBox({ endpoint: c.endpoint, mapping: c.mapping, policy, ...(c.verifierUrl && readToken ? { externalOutbox: { url: c.verifierUrl, readToken, fetch: { policy } } } : {}) });
   }
+  if (method === "POST" && path === "/api/plan") {
+    const req = parse(PlanRequestSchema, body);
+    const model = hasKey ? new AgentsApiPlanner(new OpenAI() as any, process.env.ZB_AGENTS_MODEL ?? AGENTS_MODEL_DEFAULT) : undefined;
+    const plan = await buildPlan(req, availableSources(), model);
+    plans.set(plan.planId, plan);
+    if (plans.size > 200) plans.delete(plans.keys().next().value!);
+    return plan;
+  }
+  if (method === "POST" && path === "/api/plan/run") {
+    const reqRun = parse(PlanRun, body);
+    const plan = plans.get(reqRun.planId);
+    if (!plan) throw new HttpError(404, "Plan not found or expired; propose the tests again.");
+    const total = reqRun.items.reduce((n, i) => n + i.repeats, 0);
+    if (total > 500) throw new HttpError(400, `Too many runs at once (${total}); the limit is 500.`);
+    const sourcesNow = availableSources();
+    const compiled = reqRun.items.map((item) => {
+      const p = plan.scenarios.find((x) => x.id === item.scenarioId);
+      if (!p) throw new HttpError(400, `Unknown test: ${item.scenarioId}`);
+      const fresh = planAccess(p, sourcesNow); // re-check access at run time, never trust the earlier answer
+      if (fresh.readiness !== "READY") throw new HttpError(400, `"${p.title}" is not ready: ${fresh.readinessReason}`);
+      if (p.approvalRequired && !item.approved) throw new HttpError(400, `"${p.title}" has real-world effects and needs your explicit approval.`);
+      try {
+        return { scenario: toScenario(fresh, { ...(item.task ? { task: item.task } : {}) }), repeats: item.repeats };
+      } catch (err) {
+        throw new HttpError(400, `"${p.title}": ${(err as Error).message}`);
+      }
+    });
+    const { runner, agent, externalOutbox } = build(reqRun.agent);
+    const sources = runSources();
+    const runIds: string[] = [];
+    const jobs: (() => Promise<void>)[] = [];
+    for (const { scenario, repeats } of compiled) {
+      for (let i = 0; i < repeats; i++) {
+        const runId = newRunId();
+        runIds.push(runId);
+        const entry = { events: [] as RunEvent[], record: null as RunRecord | null, error: null as string | null };
+        live.set(runId, entry);
+        jobs.push(async () => {
+          try {
+            entry.record = await runScenario({ scenario, agent, runner, judge, store, runId, sources, ...(externalOutbox ? { externalOutbox } : {}), onEvent: (e) => entry.events.push(e) });
+          } catch (err) {
+            entry.error = (err as Error).message;
+          }
+        });
+      }
+    }
+    void (async () => {
+      for (const j of jobs) await j();
+      await sources.closeAll();
+    })();
+    return { runIds, planner: plan.planner };
+  }
   if (method === "POST" && path === "/api/runs") {
     const req = parse(StartRuns, body);
     const { runner, agent, externalOutbox } = build(req.agent);
@@ -203,7 +286,7 @@ const server = http.createServer(async (req, res) => {
     res.end(JSON.stringify(b));
   };
   try {
-    if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/connections" || url.pathname.startsWith("/run/"))) {
+    if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/connections" || url.pathname === "/design" || url.pathname.startsWith("/run/"))) {
       res.writeHead(200, { "content-type": "text/html; charset=utf-8", "content-security-policy": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'" });
       return res.end(readFileSync(pageUrl, "utf8"));
     }

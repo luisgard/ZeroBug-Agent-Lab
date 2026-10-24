@@ -44,23 +44,35 @@ export class ConnectorVerifier implements VerifierAdapter {
 
     const now = this.ctx.now ?? Date.now;
     const deadline = now() + cc.waitSeconds * 1000;
-    const to = cc.type === "email_received" ? (cc.to === "customer" ? this.ctx.customerEmail : cc.to) : undefined;
+    const sub = (v: string | undefined) => v?.replaceAll("{ref}", this.ctx.ref);
+    const c2 = (cc.type === "email_received"
+      ? { ...cc, to: sub(cc.to)!, subjectContains: sub(cc.subjectContains), bodyContains: sub(cc.bodyContains), fromContains: sub(cc.fromContains) }
+      : cc) as ConnectorCheck;
+    const to = c2.type === "email_received" ? (c2.to === "customer" ? this.ctx.customerEmail : c2.to) : undefined;
+    const exactly = c2.type === "email_received" ? c2.exactly : undefined;
     let lastError: string | null = null;
     let reads = 0;
     let nearMiss: { record: ExternalRecord; why: string } | null = null;
+    let matches: ExternalRecord[] = [];
     for (;;) {
       try {
-        const records = await source.fetch(kind, { ref: this.ctx.ref, since: this.ctx.since, ...(to ? { to } : {}) });
+        const records = await source.fetch(kind, { ref: this.ctx.ref, since: this.ctx.since, matchRef: c2.requireRef, ...(to ? { to } : {}) });
         reads += 1;
         lastError = null;
+        matches = [];
         for (const r of records) {
-          const why = mismatch(cc, r, this.ctx.ref, to);
-          if (!why) {
-            const ref = this.rec("external_read", `[${source.name}] ${kind} matching ${cc.id} found`, trim(r));
-            return result("pass", `${describe(cc, to)} found in ${source.name} (${source.kind}), record ${r.id}`, [ref]);
-          }
-          nearMiss ??= { record: r, why };
+          const date = (r as { date?: string }).date;
+          if (date && Date.parse(date) < this.ctx.since.getTime() - 60_000) continue; // outside the run window
+          const why = mismatch(c2, r, this.ctx.ref, to);
+          if (!why) matches.push(r);
+          else nearMiss ??= { record: r, why };
         }
+        if (matches.length && exactly === undefined) {
+          const ref = this.rec("external_read", `[${source.name}] ${kind} matching ${cc.id} found`, trim(matches[0]!));
+          const weak = c2.requireRef ? "" : " (tied to this run by time window only, not by reference)";
+          return result("pass", `${describe(c2, to)} found in ${source.name} (${source.kind}), record ${matches[0]!.id}${weak}`, [ref]);
+        }
+        if (exactly !== undefined && matches.length > exactly) break; // duplicates already proven
       } catch (err) {
         lastError = (err as Error).message;
       }
@@ -70,14 +82,20 @@ export class ConnectorVerifier implements VerifierAdapter {
     if (lastError && reads === 0) {
       return result("inconclusive", `Could not read ${source.name}: ${lastError}. Absence is not assumed from a failed read.`);
     }
+    if (exactly !== undefined && matches.length > 0) {
+      const refs = matches.slice(0, 5).map((m) => this.rec("external_read", `[${source.name}] matching ${kind} ${m.id}`, trim(m)));
+      return matches.length === exactly
+        ? result("pass", `Exactly ${exactly} ${describe(c2, to)} in ${source.name} after waiting ${c2.waitSeconds}s`, refs)
+        : result("fail", `${matches.length} matching emails, expected exactly ${exactly} (duplicates)`, refs);
+    }
     const ref = this.rec("external_read", `[${source.name}] searched ${kind} records for ${this.ctx.ref}`, {
       reads,
-      waitSeconds: cc.waitSeconds,
+      waitSeconds: c2.waitSeconds,
       nearMiss: nearMiss ? { record: trim(nearMiss.record), why: nearMiss.why } : null,
       lastError,
     });
     const detail = nearMiss ? `; closest record ${nearMiss.record.id} rejected: ${nearMiss.why}` : "";
-    return result("fail", `No ${describe(cc, to)} in ${source.name} after ${cc.waitSeconds}s${detail}`, [ref]);
+    return result("fail", `No ${describe(c2, to)} in ${source.name} after ${c2.waitSeconds}s${detail}`, [ref]);
   }
 }
 

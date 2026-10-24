@@ -24,6 +24,8 @@ Current status by gate (what is done, partial or blocked, and why): [`WAVE_STATU
 
 Tested end to end: sample agents and one independently built **LangGraph** agent (bridge and black-box), on localhost. Other frameworks follow the same contract but are untested. See [`docs/UNIVERSAL-CAPABILITIES.md`](docs/UNIVERSAL-CAPABILITIES.md).
 
+**Run it locally (Spanish, step by step):** [`docs/LOCAL-SETUP.md`](docs/LOCAL-SETUP.md) — includes a 5-minute demo: describe an email agent, ZeroBug proposes tests, runs them 3×, and proves each email arrived (and catches an agent that only claims it).
+
 ## Quick start
 
 Requires Node.js 20+ (Python 3.10+ for the external agent example).

@@ -252,3 +252,24 @@ describe("example sources file", () => {
     expect(SourcesFileSchema.safeParse(JSON.parse(readFileSync("zerobug.sources.example.json", "utf8"))).success).toBe(true);
   });
 });
+
+describe("email_received extensions", () => {
+  test("{ref} recipient, exactly-once and duplicates", async () => {
+    const mail = (id: string) => ({ id, to: "qa+ZB-REF00001@example.test", from: "a", subject: "Hello ZB-REF00001", body: "", date: new Date().toISOString() });
+    const one = verifier(sourceOf([mail("1")]));
+    const c = check({ type: "email_received", source: "src", to: "qa+{ref}@example.test", exactly: 1, waitSeconds: 0 });
+    expect((await one.verify(c, "r")).status).toBe("pass");
+    const two = await verifier(sourceOf([mail("1"), mail("2")])).verify(c, "r");
+    expect(two.status).toBe("fail");
+    expect(two.reason).toMatch(/duplicates/);
+  });
+  test("time-window correlation when the email cannot carry the reference", async () => {
+    const old = { id: "o", to: "qa@example.test", from: "jobs-noreply@linkedin.com", subject: "Your application was sent", body: "", date: new Date(Date.now() - 3_600_000).toISOString() };
+    const fresh = { ...old, id: "n", date: new Date().toISOString() };
+    const c = check({ type: "email_received", source: "src", to: "qa@example.test", fromContains: "linkedin", requireRef: false, waitSeconds: 0 });
+    expect((await verifier(sourceOf([old])).verify(c, "r")).status).toBe("fail");
+    const r = await verifier(sourceOf([old, fresh])).verify(c, "r");
+    expect(r.status).toBe("pass");
+    expect(r.reason).toMatch(/time window only/);
+  });
+});

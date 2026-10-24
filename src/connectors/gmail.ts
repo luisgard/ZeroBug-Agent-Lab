@@ -81,7 +81,7 @@ export class GmailSource implements EvidenceSource {
     if (kind !== "email") return [];
     // Gmail search: exact reference, newer than the run start (after: takes epoch seconds).
     const after = Math.floor(q.since.getTime() / 1000) - 60;
-    const query = `"${q.ref}" after:${after}${q.to ? ` to:${q.to}` : ""} in:anywhere`;
+    const query = `${q.matchRef === false ? "" : `"${q.ref}" `}after:${after}${q.to ? ` to:${q.to}` : ""} in:anywhere`;
     const list = await this.get(`/messages?maxResults=${this.cfg.maxMessages ?? 20}&q=${encodeURIComponent(query)}`);
     const ids: string[] = (list.messages ?? []).map((m: { id: string }) => m.id);
     const out: EmailRecord[] = [];

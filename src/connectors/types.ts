@@ -20,6 +20,8 @@ export type RecordQuery = {
   since: Date;
   /** Optional recipient hint for email searches. */
   to?: string;
+  /** When false the source must not filter by reference (records are tied to the run by time window only). */
+  matchRef?: boolean;
 };
 
 export interface EvidenceSource {

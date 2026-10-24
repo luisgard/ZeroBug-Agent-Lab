@@ -64,7 +64,8 @@ export const CheckSchema = z.discriminatedUnion("type", [
     ...Common,
     type: z.literal("email_received"),
     source: SourceName,
-    to: Recipient,
+    /** May contain {ref} (e.g. qa+{ref}@example.com) for a unique recipient per run. */
+    to: z.string().regex(/^(customer|[^\s@]+@[^\s@]+\.[^\s@]+)$/, "email address or customer"),
     subjectContains: Phrase.optional(),
     bodyContains: Phrase.optional(),
     fromContains: Phrase.optional(),
@@ -72,6 +73,8 @@ export const CheckSchema = z.discriminatedUnion("type", [
     requireRef: z.boolean().default(true),
     /** Delivery is asynchronous: poll the source up to this long before deciding. */
     waitSeconds: z.number().int().min(0).max(600).default(60),
+    /** Exact number of matching emails (e.g. 1 = no duplicates). Waits the full window before passing. */
+    exactly: z.number().int().min(1).max(100).optional(),
   }),
   z.strictObject({
     ...Common,
