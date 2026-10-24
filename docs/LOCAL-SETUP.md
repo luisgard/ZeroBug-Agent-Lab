@@ -77,7 +77,7 @@ node examples/email-agent/server.cjs
 
 Luego, en la interfaz:
 
-1. **Tu agente** → *Usar el agente de ejemplo* → *Conectar y probar* → *Siguiente*.
+1. **Tu agente** → en *Dirección de la API* escribe `http://127.0.0.1:3399/chat` → *Conectar y probar* → *Siguiente*. (El botón *Usar el agente de ejemplo* llena la del agente de soporte ShopZ, `http://127.0.0.1:3400/agent/v1`, que se levanta con `node examples/support-agent/server.cjs`.)
 2. **Qué hace** → toca el ejemplo *Envía correos por mí* → *Proponer pruebas*.
 3. **Pruebas** → en la primera prueba pulsa *Conectar tu correo* → *Un buzón con API*:
    - Dirección del buzón: `http://127.0.0.1:3399/inbox?q={ref}`

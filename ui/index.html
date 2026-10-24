@@ -179,7 +179,7 @@ const T = {
     a_name: "Nombre de esta versión (opcional)", a_name_h: "Para comparar después, por ejemplo “v1” y “v2”.",
     a_adv: "Opciones avanzadas", a_in: "Campo del mensaje", a_out: "Campo de la respuesta", a_corr: "Campo de conversación (opcional)",
     a_sel_in: "Caja de texto (selector CSS, opcional)", a_sel_send: "Botón de enviar (opcional)", a_sel_out: "Burbuja de respuesta (opcional)", a_sel_h: "Si los dejas vacíos, ZeroBug los detecta solo.",
-    a_try: "Conectar y probar", a_trying: "Saludando a tu agente…", a_ok: "Tu agente respondió", a_in_s: "en", a_fail: "No pudimos hablar con tu agente", a_sample: "Usar el agente de ejemplo",
+    a_try: "Conectar y probar", a_trying: "Saludando a tu agente…", a_ok: "Tu agente respondió", a_in_s: "en", a_fail: "No pudimos hablar con tu agente", a_sample: "Usar el agente de ejemplo (ShopZ)", a_refused: "No hay nada corriendo en esa dirección. ¿Levantaste el agente? Para el de ejemplo: node examples/support-agent/server.cjs en otra ventana.",
     next: "Siguiente", back: "Atrás",
     d_title: "¿Qué hace tu agente?", d_lead: "Cuéntalo como se lo explicarías a una persona. ZeroBug propone las pruebas.",
     d_desc_ph: "Ej. Envía correos por mí a quien yo le diga.", d_examples: "Ejemplos:",
@@ -230,7 +230,7 @@ const T = {
     a_name: "Name of this version (optional)", a_name_h: "To compare later, e.g. “v1” and “v2”.",
     a_adv: "Advanced options", a_in: "Message field", a_out: "Reply field", a_corr: "Conversation field (optional)",
     a_sel_in: "Text box (CSS selector, optional)", a_sel_send: "Send button (optional)", a_sel_out: "Reply bubble (optional)", a_sel_h: "Leave them empty and ZeroBug finds them.",
-    a_try: "Connect and test", a_trying: "Saying hi to your agent…", a_ok: "Your agent replied", a_in_s: "in", a_fail: "We couldn't talk to your agent", a_sample: "Use the sample agent",
+    a_try: "Connect and test", a_trying: "Saying hi to your agent…", a_ok: "Your agent replied", a_in_s: "in", a_fail: "We couldn't talk to your agent", a_sample: "Use the sample agent (ShopZ)", a_refused: "Nothing is running at that address. Did you start the agent? For the sample one: node examples/support-agent/server.cjs in another window.",
     next: "Next", back: "Back",
     d_title: "What does your agent do?", d_lead: "Describe it as you would to a person. ZeroBug proposes the tests.",
     d_desc_ph: "E.g. It sends emails for me to whoever I say.", d_examples: "Examples:",
@@ -426,7 +426,7 @@ function stepAgent(m) {
     } catch (e) { S.smoke = { ok: false, reason: e.message }; }
     tryBtn.disabled = false; render();
   } }, t("a_try"));
-  const sample = h("button", { type: "button", class: "btn small", onclick: () => { S.type = "api"; S.f.api = { ...(S.f.api || {}), url: "http://127.0.0.1:3399/chat" }; S.version = S.version || "v1"; reset(); save(); render(); } }, t("a_sample"));
+  const sample = h("button", { type: "button", class: "btn small", onclick: () => { S.type = "api"; S.f.api = { ...(S.f.api || {}), url: "http://127.0.0.1:3400/agent/v1" }; S.version = S.version || "v1"; reset(); save(); render(); } }, t("a_sample"));
   card.append(h("h1", {}, t("a_title")), h("p", { class: "lead" }, t("a_lead")),
     h("label", { for: "a-type" }, t("a_type")), sel,
     h("div", { class: "typebox" }, h("span", { class: "ic" }, svg(ICON[at.icon] || ICON.code)), h("p", {}, L(at.desc))),
@@ -441,7 +441,8 @@ function stepAgent(m) {
 }
 function smokeBox(sm) {
   if (sm.ok) return h("div", { class: "notice ok" }, h("b", {}, "✓ ", t("a_ok"), sm.ms ? ` ${t("a_in_s")} ${sm.ms < 1000 ? sm.ms + " ms" : (sm.ms / 1000).toFixed(1) + " s"}` : ""), h("div", { class: "bubble", style: "margin-top:8px;background:transparent;padding:0" }, `“${(sm.reply || "").slice(0, 300)}”`));
-  return h("div", { class: "notice bad" }, h("b", {}, t("a_fail")), h("div", { class: "small", style: "margin-top:4px" }, sm.reason || ""));
+  const refused = /ECONNREFUSED|unreachable|could not connect/i.test(sm.reason || "");
+  return h("div", { class: "notice bad" }, h("b", {}, t("a_fail")), refused ? h("div", { style: "margin-top:4px" }, t("a_refused")) : "", h("div", { class: "small", style: "margin-top:4px" }, sm.reason || ""));
 }
 
 // ---------------------------------------------------------------- step 2: what it does
