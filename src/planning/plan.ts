@@ -54,6 +54,15 @@ export async function buildPlan(req: PlanRequest, sources: AvailableSource[], mo
     }
     scenarios.push(planned);
   }
+  if (planner.kind === "agents_api" && scenarios.length === 0) {
+    // The model proposed nothing usable: keep its explanations, fall back to the rules, and say so.
+    const fallback = await buildPlan(req, sources);
+    return {
+      ...fallback,
+      planner: { ...OFFLINE_PLANNER, note: `${OFFLINE_PLANNER.note} The AI planner proposed no valid test, so the rules were used.` },
+      unsupported: [...fallback.unsupported, ...unsupported.map((u) => ({ ...u, why: `AI planner: ${u.why}` }))],
+    };
+  }
   return { planId: newToken(12), createdAt: nowIso(), request: req, planner, capabilitiesDetected: out.capabilities, scenarios, unsupported };
 }
 
@@ -90,11 +99,23 @@ export function planAccess(g: GeneratedScenario, sources: AvailableSource[]): Pl
 }
 
 /** Compiles a planned scenario (with any task edit) into a validated engine scenario. */
-export function toScenario(p: PlannedScenario, edits: { task?: string; runs?: number } = {}): Scenario {
+/** What a person may adjust per check before running (null removes an optional value). */
+export type CheckEdits = Record<string, Record<string, string | number | null>>;
+const EDITABLE = new Set(["to", "subjectContains", "bodyContains", "fromContains", "amount", "currency", "status", "exactly", "waitSeconds", "productContains", "quantity", "maxTotal"]);
+
+export function toScenario(p: PlannedScenario, edits: { task?: string; runs?: number; checks?: CheckEdits } = {}): Scenario {
   const placeholderToSource = Object.fromEntries(
     (Object.keys(PLACEHOLDER_SOURCE) as NeedKind[]).map((k) => [PLACEHOLDER_SOURCE[k], p.assignments[k] ?? PLACEHOLDER_SOURCE[k]]),
   );
-  const checks = p.checks.map((c) => ("source" in c ? { ...c, source: placeholderToSource[c.source] ?? c.source } : c));
+  const checks = p.checks.map((c) => {
+    const out: Record<string, unknown> = "source" in c ? { ...c, source: placeholderToSource[c.source] ?? c.source } : { ...c };
+    for (const [k, v] of Object.entries(edits.checks?.[c.id ?? ""] ?? {})) {
+      if (!EDITABLE.has(k)) throw new Error(`"${k}" cannot be edited`);
+      if (v === null || v === "") delete out[k];
+      else out[k] = v;
+    }
+    return out;
+  });
   const apps = p.capability === "email" || p.capability === "jobs" || p.capability === "support" ? ["outbox"] : ["store"];
   return validateScenario(
     {
@@ -105,7 +126,7 @@ export function toScenario(p: PlannedScenario, edits: { task?: string; runs?: nu
       apps,
       runs: edits.runs ?? 1,
       limits: { maxToolCalls: 50, maxSeconds: 300 },
-      checks,
+      checks: checks as never,
     },
     `plan:${p.id}`,
   );

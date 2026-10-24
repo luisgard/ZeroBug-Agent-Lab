@@ -88,7 +88,15 @@ const PlanRun = z.strictObject({
   planId: z.string().min(8).max(40),
   agent: AgentSpec,
   items: z
-    .array(z.strictObject({ scenarioId: z.string(), task: z.string().max(2000).optional(), repeats: z.number().int().min(1).max(100).default(1), approved: z.boolean().default(false) }))
+    .array(
+      z.strictObject({
+        scenarioId: z.string(),
+        task: z.string().max(2000).optional(),
+        repeats: z.number().int().min(1).max(100).default(1),
+        approved: z.boolean().default(false),
+        checks: z.record(z.string().max(64), z.record(z.string().max(32), z.union([z.string().max(300), z.number(), z.null()]))).optional(),
+      }),
+    )
     .min(1, "Select at least one test")
     .max(20),
 });
@@ -206,7 +214,7 @@ async function api(method: string, path: string, body: unknown): Promise<unknown
   }
   if (method === "POST" && path === "/api/plan") {
     const req = parse(PlanRequestSchema, body);
-    const model = hasKey ? new AgentsApiPlanner(new OpenAI() as any, process.env.ZB_AGENTS_MODEL ?? AGENTS_MODEL_DEFAULT) : undefined;
+    const model = hasKey && process.env.ZB_PLANNER !== "rules" ? new AgentsApiPlanner(new OpenAI() as any, process.env.ZB_AGENTS_MODEL ?? AGENTS_MODEL_DEFAULT) : undefined;
     const plan = await buildPlan(req, availableSources(), model);
     plans.set(plan.planId, plan);
     if (plans.size > 200) plans.delete(plans.keys().next().value!);
@@ -226,7 +234,7 @@ async function api(method: string, path: string, body: unknown): Promise<unknown
       if (fresh.readiness !== "READY") throw new HttpError(400, `"${p.title}" is not ready: ${fresh.readinessReason}`);
       if (p.approvalRequired && !item.approved) throw new HttpError(400, `"${p.title}" has real-world effects and needs your explicit approval.`);
       try {
-        return { scenario: toScenario(fresh, { ...(item.task ? { task: item.task } : {}) }), repeats: item.repeats };
+        return { scenario: toScenario(fresh, { ...(item.task ? { task: item.task } : {}), ...(item.checks ? { checks: item.checks } : {}) }), repeats: item.repeats };
       } catch (err) {
         throw new HttpError(400, `"${p.title}": ${(err as Error).message}`);
       }

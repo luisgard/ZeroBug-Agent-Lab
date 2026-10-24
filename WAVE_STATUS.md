@@ -9,7 +9,7 @@ Legend: **DONE** = implemented and exercised by a test or a recorded run in this
 | Command | Result |
 | --- | --- |
 | `npm run typecheck` | clean |
-| `npm test` | 14 files, **161 tests passed**, 0 failed (includes real headless Chromium tests) |
+| `npm test` | 14 files, **162 tests passed**, 0 failed (includes real headless Chromium tests) |
 | `cd examples/external-agent && .venv/bin/python -m unittest discover -s tests` | **5 tests passed** |
 | `npm run test:e2e` (two processes: LangGraph agent + ZeroBug) | **6 tests passed**; live provider test skipped (no key) |
 | `npm run proof` | **BLOCKED** — exit 3, `OPENAI_API_KEY` not set, nothing called |
@@ -37,6 +37,8 @@ Adjustments agreed with the product owner: Gmail read-only is P0 alongside sandb
 | Simple 4-step wizard UI (agent → what it does → tests → results), ES/EN, light/dark, phone width; old UI at `/advanced` | DONE | Playwright: API agent 6/6 PASS, liar agent FAIL, chat-page agent PASS with automatic input/reply detection |
 | "Where does your agent live?" list: web chat, own API, n8n, Flowise, Dify, Langflow, OpenAI-compatible, Agents API, MCP server, bridge; Slack/Teams/WhatsApp/Telegram/voice/A2A listed as coming soon | DONE (platform templates PARTIAL) | `tests/agent-kinds.test.ts`: real MCP server over HTTP (JSON and event-stream answers), OpenAI-compatible server, n8n/Langflow request shapes against a local server. Playwright: MCP agent 3/3 PASS with inbox evidence. **n8n, Flowise, Dify, Langflow templates not run against the real platforms.** |
 | Customer-support refund tests (offline planner): eligible refund exactly once, outside-policy refusal, prompt injection; new checks `payment_exists.exactly` and `payment_absent` | DONE | `tests/planning.test.ts`, `tests/connectors.test.ts`; Playwright against the ShopZ sandbox with a simulated model: v1 15/15, v2 4/15 (double refund after gateway timeout, out-of-policy refund, injected 589 USD refund). **Not yet run with a real OpenAI model.** |
+| Editable expected values per check in step 3 (recipient, subject, amount, currency, status, exactly, wait); validated by the engine | DONE | `tests/planning.test.ts`; Playwright: amount 49.90 → PASS, 10 → FAIL with the reason |
+| AI planner gets the exact scenario JSON schema + an example; if it proposes nothing valid, rules are used and its reasons shown | DONE | `tests/planning.test.ts`. The AI planner ran live once on the product owner's machine and its output was rejected, which led to this fix; the fix itself is not yet run live. |
 | Agent keys typed in the UI: memory only, redacted from errors | DONE | Playwright check: token absent from localStorage; `tests/agent-kinds.test.ts` |
 | MCP over HTTP through the SSRF-safe client (`guardedFetch`): request bodies and response headers now forwarded | DONE | Fixes MCP connections over HTTP, which previously dropped the request body |
 | Chat-page agents without CSS selectors (automatic text box + reply detection) | DONE | `tests/browser.test.ts` (real Chromium) |

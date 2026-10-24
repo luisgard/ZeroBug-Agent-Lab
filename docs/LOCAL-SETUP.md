@@ -88,6 +88,8 @@ Luego, en la interfaz:
 6. El mismo agente de ejemplo también se puede probar como **Servidor MCP** (`http://127.0.0.1:3399/mcp`) o como **API compatible con OpenAI** (dirección `http://127.0.0.1:3399/v1`, modelo `mail-agent`).
 7. Vuelve al paso 1 con la dirección `http://127.0.0.1:3399/liar-chat` (un agente que dice "ya lo envié" sin enviarlo): resultado **Falló**, con la razón.
 
+Probar los agentes de tu equipo: [`docs/TU-AGENTE.md`](TU-AGENTE.md).
+
 Guion de demo con un **agente de soporte con IA que hace reembolsos** (v1 buena vs v2 con bugs, tienda de prueba ShopZ): [`docs/DEMO-ES.md`](DEMO-ES.md).
 
 ## 6. Configuración: qué es cada cosa y cuál importa

@@ -47,6 +47,9 @@
   h1 { font-size: 28px; line-height: 1.2; margin: 0 0 6px; letter-spacing: -.02em; }
   h2 { font-size: 18px; margin: 0 0 8px; }
   .lead { color: var(--muted); margin: 0 0 20px; }
+  .expect { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin: 8px 0; }
+  .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px; }
+  @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
   .typebox { display: flex; gap: 14px; align-items: flex-start; background: var(--brand-soft); border-radius: var(--radius); padding: 14px 16px; margin: 12px 0 8px; }
   .typebox p { margin: 0; color: var(--ink); font-size: 15px; }
   .typebox .ic { width: 36px; height: 36px; border-radius: 10px; background: var(--card); display: grid; place-items: center; flex: none; color: var(--brand); }
@@ -188,8 +191,10 @@ const T = {
     d_go: "Proponer pruebas", d_going: "Diseñando tus pruebas…",
     p_title: "Te proponemos {n} pruebas", p_title1: "Te proponemos 1 prueba", p_title0: "No encontramos qué probar",
     p_lead: "Activa las que quieras. Solo corren las que ZeroBug puede comprobar de verdad.",
-    p_rules: "Diseñadas con reglas básicas. Con una clave de OpenAI, la IA diseña pruebas más completas.", p_ai: "Diseñadas con IA (OpenAI Agents API) y revisadas con reglas.",
+    p_ai_fallback: "La IA no logró proponer pruebas válidas esta vez (abajo verás por qué), así que usamos las reglas básicas.", p_rules: "Diseñadas con reglas básicas. Con una clave de OpenAI, la IA diseña pruebas más completas.", p_ai: "Diseñadas con IA (OpenAI Agents API) y revisadas con reglas.",
     p_ready: "Lista", p_access: "Falta conectar {x}", p_review: "Revisa antes de correr", p_unsupported: "No soportada",
+    p_expect: "Lo que esperamos (puedes ajustarlo a tu sistema)", p_expect_h: "Vacío = no se revisa. {ref} se cambia por la referencia única de cada corrida.",
+    e_to: "Destinatario", e_subject: "El asunto contiene", e_exactly: "Exactamente cuántos", e_wait: "Esperar hasta (segundos)", e_amount: "Monto", e_currency: "Moneda (ej. USD, MXN)", e_status: "Estado", e_product: "El producto contiene", e_qty: "Cantidad", e_maxtotal: "Total máximo", e_none: "(no se revisa)",
     p_details: "Ver detalles", p_task: "Lo que le pediremos a tu agente", p_checks: "Lo que vamos a comprobar", p_limits: "A tener en cuenta",
     p_connect: "Conectar {x}", p_approve: "Entiendo que esta prueba hace acciones reales y la apruebo",
     p_times: "¿Cuántas veces quieres probar cada una?", p_custom: "Otro", p_run: "Correr {n} pruebas", p_run1: "Correr 1 prueba",
@@ -239,8 +244,10 @@ const T = {
     d_go: "Propose tests", d_going: "Designing your tests…",
     p_title: "We propose {n} tests", p_title1: "We propose 1 test", p_title0: "We couldn't find what to test",
     p_lead: "Turn on the ones you want. Only tests ZeroBug can really verify will run.",
-    p_rules: "Designed with basic rules. With an OpenAI key, AI designs more complete tests.", p_ai: "Designed with AI (OpenAI Agents API) and checked with rules.",
+    p_ai_fallback: "The AI couldn't propose valid tests this time (see why below), so the basic rules were used.", p_rules: "Designed with basic rules. With an OpenAI key, AI designs more complete tests.", p_ai: "Designed with AI (OpenAI Agents API) and checked with rules.",
     p_ready: "Ready", p_access: "Connect {x} first", p_review: "Review before running", p_unsupported: "Not supported",
+    p_expect: "What we expect (adjust it to your system)", p_expect_h: "Empty = not checked. {ref} becomes each run's unique reference.",
+    e_to: "Recipient", e_subject: "Subject contains", e_exactly: "Exactly how many", e_wait: "Wait up to (seconds)", e_amount: "Amount", e_currency: "Currency (e.g. USD, MXN)", e_status: "Status", e_product: "Product contains", e_qty: "Quantity", e_maxtotal: "Max total", e_none: "(not checked)",
     p_details: "See details", p_task: "What we'll ask your agent", p_checks: "What we'll verify", p_limits: "Keep in mind",
     p_connect: "Connect {x}", p_approve: "I understand this test takes real actions and I approve it",
     p_times: "How many times should each one run?", p_custom: "Other", p_run: "Run {n} tests", p_run1: "Run 1 test",
@@ -465,7 +472,7 @@ async function proposeTests(btn, msg) {
   msg && msg.replaceChildren(h("div", { class: "notice neutral", style: "display:flex;gap:10px;align-items:center" }, h("span", { class: "spinner" }), t("d_going")));
   try {
     S.plan = await call("POST", "/api/plan", { description: S.desc, specifics: S.spec, lang, agentMode: agentType().plan });
-    S.picks = Object.fromEntries(S.plan.scenarios.map((s) => [s.id, { on: s.readiness === "READY", task: s.task, approved: false }]));
+    S.picks = Object.fromEntries(S.plan.scenarios.map((s) => [s.id, { on: s.readiness === "READY", task: s.task, approved: false, checks: {} }]));
     S.step = 3; render();
   } catch (e) { msg && msg.replaceChildren(h("div", { class: "notice bad" }, e.message)); if (btn) btn.disabled = false; }
 }
@@ -497,7 +504,7 @@ function stepTests(m) {
   const p = S.plan;
   const n = p.scenarios.length;
   const head = h("section", { class: "card" }, h("h1", {}, n === 0 ? t("p_title0") : n === 1 ? t("p_title1") : t("p_title", { n })), h("p", { class: "lead" }, t("p_lead")),
-    h("div", { class: "notice " + (p.planner.kind === "agents_api" ? "info" : "neutral"), style: "margin-top:0" }, p.planner.kind === "agents_api" ? t("p_ai") : t("p_rules")));
+    h("div", { class: "notice " + (p.planner.kind === "agents_api" ? "info" : "neutral"), style: "margin-top:0" }, p.planner.kind === "agents_api" ? t("p_ai") : /AI planner|Agents API planner failed/.test(p.planner.note || "") ? t("p_ai_fallback") : t("p_rules")));
   m.append(head);
   for (const s of p.scenarios) m.append(testCard(s));
   if (p.unsupported.length) m.append(h("section", { class: "card" }, h("h2", {}, t("p_cant")), h("ul", { class: "clean" }, ...p.unsupported.map((u) => h("li", {}, h("span", { class: "mark warn" }, "!"), h("div", {}, h("b", {}, u.text), h("div", { class: "muted small" }, u.why)))))));
@@ -516,7 +523,7 @@ function stepTests(m) {
   };
   const chips = counts.map((c) => { const b = h("button", { type: "button", class: "chip", "data-n": c, onclick: () => { S.repeats = c; custom.value = ""; paintRun(); } }, String(c)); return b; });
   runBtn.onclick = async () => {
-    const items = p.scenarios.filter((s) => S.picks[s.id].on).map((s) => ({ scenarioId: s.id, task: S.picks[s.id].task, repeats: S.repeats, approved: S.picks[s.id].approved }));
+    const items = p.scenarios.filter((s) => S.picks[s.id].on).map((s) => ({ scenarioId: s.id, task: S.picks[s.id].task, repeats: S.repeats, approved: S.picks[s.id].approved, ...(Object.keys(S.picks[s.id].checks || {}).length ? { checks: S.picks[s.id].checks } : {}) }));
     if (!items.length) { err.replaceChildren(h("div", { class: "notice bad" }, t("p_none_on"))); return; }
     runBtn.disabled = true;
     try {
@@ -551,8 +558,35 @@ function testCard(s) {
       approve ? h("div", { class: "notice warn", style: "display:flex;gap:10px;align-items:flex-start" }, approve, h("label", { for: "ap-" + s.id, style: "margin:0;font-weight:500" }, t("p_approve"))) : "",
       h("details", {}, h("summary", {}, t("p_details")),
         h("label", { for: "task-" + s.id }, t("p_task")), task,
+        expectEditor(s, pick),
         s.limitations.length ? h("div", {}, h("label", {}, t("p_limits")), h("ul", { class: "clean" }, ...s.limitations.map((l) => h("li", { class: "small muted" }, "• ", l)))) : ""))));
   return card;
+}
+
+/** Per-check expected values a person can adjust to their own system (sent as edits, validated by the server). */
+const EDIT_FIELDS = {
+  email_received: [["to", "e_to", "text"], ["subjectContains", "e_subject", "text"], ["exactly", "e_exactly", "number"], ["waitSeconds", "e_wait", "number"]],
+  payment_exists: [["amount", "e_amount", "number"], ["currency", "e_currency", "text"], ["status", "e_status", "text"], ["exactly", "e_exactly", "number"], ["waitSeconds", "e_wait", "number"]],
+  payment_absent: [["waitSeconds", "e_wait", "number"]],
+  order_exists: [["productContains", "e_product", "text"], ["quantity", "e_qty", "number"], ["maxTotal", "e_maxtotal", "number"], ["status", "e_status", "text"], ["waitSeconds", "e_wait", "number"]],
+};
+function expectEditor(s, pick) {
+  const blocks = s.checks.filter((c) => EDIT_FIELDS[c.type]).map((c) => {
+    const ed = (pick.checks[c.id] ||= {});
+    const inputs = EDIT_FIELDS[c.type].flatMap(([k, label, type]) => {
+      const id = `x-${s.id}-${c.id}-${k}`;
+      const cur = k in ed ? ed[k] : c[k];
+      const i = h("input", { id, type, value: cur ?? "", placeholder: t("e_none"), ...(type === "number" ? { step: "any", min: 0 } : {}) });
+      i.oninput = () => {
+        const raw = i.value.trim();
+        const v = raw === "" ? null : type === "number" ? Number(raw) : raw;
+        if (v === (c[k] ?? null)) delete ed[k]; else ed[k] = v;
+      };
+      return [h("label", { for: id, class: "small" }, t(label)), i];
+    });
+    return h("div", { class: "expect" }, h("b", { class: "small" }, describeCheck(c)), h("div", { class: "grid2" }, ...inputs));
+  });
+  return blocks.length ? h("div", {}, h("label", {}, t("p_expect")), h("p", { class: "hint" }, t("p_expect_h")), ...blocks) : "";
 }
 
 // ---------------------------------------------------------------- step 4: results
