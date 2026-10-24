@@ -16,3 +16,4 @@ data/live/
 zerobug.sources.json
 data/connections.json
 data/.zb-secret.key
+data/live-demo/

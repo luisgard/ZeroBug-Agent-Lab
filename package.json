@@ -14,6 +14,7 @@
     "zb": "tsx scripts/zb.ts",
     "proof": "tsx scripts/api-proof.ts",
     "demo:external": "tsx scripts/external-demo.ts",
+    "demo:live": "tsx scripts/live-demo.ts",
     "ui": "tsx scripts/ui-server.ts"
   },
   "dependencies": {

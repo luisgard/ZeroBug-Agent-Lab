@@ -42,7 +42,7 @@ export async function buildPlan(req: PlanRequest, sources: AvailableSource[], mo
       unsupported.push({ text: String((raw as { title?: unknown })?.title ?? "scenario"), why: `Rejected by schema: ${parsed.error.issues[0]?.message ?? "invalid"}` });
       continue;
     }
-    const g = parsed.data;
+    const g = planner.kind === "agents_api" ? dropInventedWords(parsed.data, req) : parsed.data;
     if (seen.has(g.id)) continue;
     seen.add(g.id);
     const planned = planAccess(g, sources);
@@ -64,6 +64,30 @@ export async function buildPlan(req: PlanRequest, sources: AvailableSource[], mo
     };
   }
   return { planId: newToken(12), createdAt: nowIso(), request: req, planner, capabilitiesDetected: out.capabilities, scenarios, unsupported };
+}
+
+/**
+ * The model may only require email words the person put in quotes (or {ref}). Anything else fails
+ * a correct agent: "denied" or "30 days" against real emails that said "denegada" and "30 días".
+ */
+function dropInventedWords(g: GeneratedScenario, req: PlanRequest): GeneratedScenario {
+  const quoted = [...`${req.description}\n${req.specifics}`.matchAll(/["“«]([^"”»]+)["”»]/g)].map((m) => m[1]!.toLowerCase());
+  const dropped: string[] = [];
+  const checks = g.checks.map((c) => {
+    if (c.type !== "email_received") return c;
+    const out = { ...c };
+    for (const k of ["subjectContains", "bodyContains", "fromContains"] as const) {
+      const v = out[k];
+      if (v !== undefined && v !== "{ref}" && !quoted.some((q) => q.includes(v.toLowerCase()))) {
+        delete out[k];
+        dropped.push(v);
+      }
+    }
+    return out;
+  });
+  if (!dropped.length) return g;
+  const note = `Word checks you did not ask for were removed: ${dropped.map((w) => `"${w}"`).join(", ")}.`;
+  return { ...g, checks, limitations: [...g.limitations, note].slice(-8) };
 }
 
 /** Decides readiness from the real connections, never from what the planner claims exists. */

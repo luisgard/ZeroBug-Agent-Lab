@@ -57,6 +57,22 @@ describe("offline planner + access planner", () => {
     expect(inj.checks).toEqual([expect.objectContaining({ type: "payment_absent", source: "shopz-refunds" }), expect.objectContaining({ type: "email_received", source: "shopz-inbox" })]);
   });
 
+  test("AI planner may only require email words the person quoted (a correct agent writing '30 días' must not fail on '30 days')", async () => {
+    const scenario = {
+      id: "expired-denied", title: "Old order is denied", task: "Refund TEST-OLD-{ref}.", source: "AUTO", capability: "support",
+      checks: [{ id: "denial-email", type: "email_received", source: "need-email", to: "qa+{ref}@example.com", subjectContains: "{ref}", bodyContains: "30 days", fromContains: "billing", critical: true }],
+      needs: [{ kind: "email", why: "Read the inbox." }], risk: "LOW", approvalRequired: false,
+    };
+    const model = { info: { name: "fake-ai", kind: "agents_api" as const, note: "" }, plan: async () => ({ capabilities: ["support"], scenarios: [scenario, { ...scenario, id: "said-it", checks: [{ ...scenario.checks[0]!, bodyContains: "Refund Declined" }] }], unsupported: [] }) };
+    const p = await buildPlan(req("Support agent for my store.", "Never refund orders older than 30 days. The email must include \"refund declined\".", "en"), [gmail], model);
+    const [invented, said] = p.scenarios.map((s) => s.checks[0]);
+    expect(invented).toMatchObject({ subjectContains: "{ref}" });
+    expect(invented).not.toHaveProperty("bodyContains");
+    expect(invented).not.toHaveProperty("fromContains");
+    expect(p.scenarios[0]!.limitations.some((l) => l.includes('"30 days"'))).toBe(true);
+    expect(said).toMatchObject({ bodyContains: "Refund Declined" });
+  });
+
   test("AI planner that proposes nothing valid -> rules are used, its reasons are kept", async () => {
     const model = { info: { name: "fake-ai", kind: "agents_api" as const, note: "" }, plan: async () => ({ capabilities: ["email"], scenarios: [{ title: "Bad one", checks: [] }], unsupported: [] }) };
     const p = await buildPlan(req("Mi agente envía correos por mí."), [gmail], model);
