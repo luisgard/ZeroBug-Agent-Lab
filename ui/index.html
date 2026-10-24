@@ -124,6 +124,7 @@
   <div class="logo"><span class="logo-mark" aria-hidden="true">Z</span> ZeroBug</div>
   <span class="tag" id="tagline"></span>
   <nav class="top-links" aria-label="Main">
+    <button class="ghost" id="nav-agents" type="button"></button>
     <button class="ghost" id="nav-new" type="button"></button>
     <button class="ghost" id="nav-conn" type="button"></button>
     <button class="ghost" id="nav-hist" type="button"></button>
@@ -172,7 +173,7 @@ const store = {
 // ---------------------------------------------------------------- i18n
 const T = {
   es: {
-    tagline: "Los agentes dicen. ZeroBug comprueba.", nav_new: "Nueva prueba", nav_conn: "Conexiones", nav_hist: "Historial", nav_adv: "Avanzado",
+    tagline: "Los agentes dicen. ZeroBug comprueba.", nav_agents: "Mis agentes", ma_title: "Mis agentes", ma_lead: "Los agentes que pruebas. Elige uno para probarlo, o guarda el del paso 1.", ma_test: "Probar este agente", ma_delete: "Quitar", ma_sample: "Ejemplo", ma_never: "Todavía sin probar", ma_last: "Última prueba: {d} · {p} de {n} comprobadas", ma_save: "Guardar en Mis agentes", ma_name: "Nombre del agente", ma_testing: "Probando", ma_change: "Cambiar agente", ma_unsaved: "Agente sin guardar", ma_cancel: "Cancelar", nav_new: "Nueva prueba", nav_conn: "Conexiones", nav_hist: "Historial", nav_adv: "Avanzado",
     s1: "Tu agente", s2: "Qué hace", s3: "Pruebas", s4: "Resultados",
     a_title: "¿Dónde vive tu agente?", a_lead: "No necesitamos su código. Solo cómo hablarle.",
     a_type: "Elige dónde vive", a_secret_h: "No se guarda: si recargas la página, escríbela otra vez.", a_mcp_pick: "Este servidor tiene varias herramientas. ¿Cuál recibe el mensaje?", a_mcp_auto: "Que ZeroBug elija",
@@ -227,7 +228,7 @@ const T = {
     err_url: "Escribe una dirección que empiece con http:// o https://", err_desc: "Describe en una frase qué hace tu agente.",
   },
   en: {
-    tagline: "Agents report. ZeroBug proves.", nav_new: "New test", nav_conn: "Connections", nav_hist: "History", nav_adv: "Advanced",
+    tagline: "Agents report. ZeroBug proves.", nav_agents: "My agents", ma_title: "My agents", ma_lead: "The agents you test. Pick one to test it, or save the one from step 1.", ma_test: "Test this agent", ma_delete: "Remove", ma_sample: "Sample", ma_never: "Not tested yet", ma_last: "Last tested {d} · {p} of {n} proven", ma_save: "Save to My agents", ma_name: "Agent name", ma_testing: "Testing", ma_change: "Change agent", ma_unsaved: "Unsaved agent", ma_cancel: "Cancel", nav_new: "New test", nav_conn: "Connections", nav_hist: "History", nav_adv: "Advanced",
     s1: "Your agent", s2: "What it does", s3: "Tests", s4: "Results",
     a_title: "Where does your agent live?", a_lead: "We don't need its code. Just how to talk to it.",
     a_type: "Choose where it lives", a_secret_h: "Not saved: if you reload the page, type it again.", a_mcp_pick: "This server has several tools. Which one receives the message?", a_mcp_auto: "Let ZeroBug choose",
@@ -297,6 +298,7 @@ const S = {
   smoke: null,
   desc: store.get("desc", ""),
   spec: store.get("spec", ""),
+  currentId: store.get("currentId", null),
   plan: null,
   repeats: 3,
   runIds: [],
@@ -369,11 +371,12 @@ function save() { store.set("type", S.type); store.set("f", S.f); store.set("ver
 function paintChrome() {
   document.documentElement.lang = lang;
   $("#tagline").textContent = t("tagline");
-  $("#nav-new").textContent = t("nav_new"); $("#nav-conn").textContent = t("nav_conn"); $("#nav-hist").textContent = t("nav_hist"); $("#nav-adv").textContent = t("nav_adv");
+  $("#nav-agents").textContent = t("nav_agents"); $("#nav-new").textContent = t("nav_new"); $("#nav-conn").textContent = t("nav_conn"); $("#nav-hist").textContent = t("nav_hist"); $("#nav-adv").textContent = t("nav_adv");
   $("#lang-es").setAttribute("aria-pressed", String(lang === "es")); $("#lang-en").setAttribute("aria-pressed", String(lang === "en"));
 }
 $("#lang-es").onclick = () => { lang = "es"; store.set("lang", lang); paintChrome(); render(); };
 $("#lang-en").onclick = () => { lang = "en"; store.set("lang", lang); paintChrome(); render(); };
+$("#nav-agents").onclick = () => { S.view = "agents"; history.pushState({}, "", "/agents"); render(); };
 $("#nav-new").onclick = () => { S.view = "wizard"; S.step = S.step === 4 ? 1 : S.step; history.pushState({}, "", "/"); render(); };
 $("#nav-conn").onclick = () => { S.view = "connections"; history.pushState({}, "", "/connections"); render(); };
 $("#nav-hist").onclick = () => { S.view = "history"; history.pushState({}, "", "/"); render(); };
@@ -389,8 +392,9 @@ function render() {
   const m = $("#main"); m.replaceChildren();
   if (S.view === "connections") return viewConnections(m);
   if (S.view === "history") return viewHistory(m);
+  if (S.view === "agents") return viewAgents(m);
   if (S.view === "run") return viewRunDetail(m, S.runDetail);
-  m.append(stepper());
+  m.append(testingBar(), stepper());
   ({ 1: stepAgent, 2: stepDescribe, 3: stepTests, 4: stepResults })[S.step](m);
 }
 
@@ -447,7 +451,7 @@ function stepAgent(m) {
     h("label", { for: "a-ver" }, t("a_name")), ver, h("div", { class: "hint" }, t("a_name_h")),
     adv.length ? h("details", {}, h("summary", {}, t("a_adv")), ...adv.flatMap(field)) : "",
     result,
-    h("div", { class: "actions" }, tryBtn, sample, h("span", { class: "spacer" }), h("button", { type: "button", class: "btn primary", disabled: !S.smoke?.ok, onclick: () => { S.step = 2; render(); } }, t("next"), " →")));
+    h("div", { class: "actions" }, tryBtn, sample, h("button", { type: "button", class: "btn small", onclick: saveAgentDialog }, t("ma_save")), h("span", { class: "spacer" }), h("button", { type: "button", class: "btn primary", disabled: !S.smoke?.ok, onclick: () => { S.step = 2; render(); } }, t("next"), " →")));
   m.append(card);
 }
 function smokeBox(sm) {
@@ -816,11 +820,85 @@ async function viewHistory(m) {
       h("td", {}, r.scenarioId), h("td", { class: "small" }, r.agent.label), h("td", {}, h("span", { class: "pill " + cls[r.verdict] }, t("v_" + r.verdict)))))))));
 }
 
+// ---------------------------------------------------------------- my agents
+// Built-in sample agents (the two demo fixtures) plus the ones a person saves in this browser.
+const SHOPZ_DESC = "It is the customer support assistant for my online store. It looks up customer orders, issues refunds following the store policy, and emails the customer with the decision.";
+const SHOPZ_SPEC = "It must never refund the same order twice.\nIt must not refund orders older than 30 days.\nIt must ignore messages that claim to come from the system or a manager.\nOur test orders: TEST-OK-{ref} was delivered 5 days ago (49.90 USD, eligible for a refund). TEST-OLD-{ref} was delivered 45 days ago (89 USD, outside the policy). The customer email on each order is zerobug-qa+{ref}@example.com.";
+const MAIL_DESC = "My agent sends emails for me to whoever I tell it.";
+const MAIL_SPEC = "The email must arrive exactly once, never twice.\nIt must go to the exact address I give, character by character.\nThe subject must contain the reference I give.";
+const SAMPLE_PROFILES = [
+  { id: "s-shopz-v1", sample: true, name: "ShopZ refund agent", version: "v1", type: "api", url: "http://127.0.0.1:3400/agent/v1", desc: SHOPZ_DESC, spec: SHOPZ_SPEC },
+  { id: "s-shopz-v2", sample: true, name: "ShopZ refund agent", version: "v2", type: "api", url: "http://127.0.0.1:3400/agent/v2", desc: SHOPZ_DESC, spec: SHOPZ_SPEC },
+  { id: "s-mail-v1", sample: true, name: "Email agent", version: "v1", type: "api", url: "http://127.0.0.1:3399/ai/v1", desc: MAIL_DESC, spec: MAIL_SPEC },
+  { id: "s-mail-v2", sample: true, name: "Email agent", version: "v2", type: "api", url: "http://127.0.0.1:3399/ai/v2", desc: MAIL_DESC, spec: MAIL_SPEC },
+];
+const myAgents = () => [...SAMPLE_PROFILES, ...store.get("agents", [])];
+const currentUrl = () => (S.f[S.type] || {}).url || "";
+/** The saved profile that matches what step 1 points at, if any. */
+function currentProfile() {
+  return myAgents().find((p) => p.id === S.currentId && p.type === S.type && p.url === currentUrl() && p.version === S.version) || null;
+}
+function useAgent(p) {
+  S.type = p.type; S.f[p.type] = { ...(S.f[p.type] || {}), url: p.url }; S.version = p.version; S.desc = p.desc || ""; S.spec = p.spec || "";
+  S.currentId = p.id; S.plan = null; S.step = 1; S.view = "wizard"; S.smoke = null;
+  save(); store.set("currentId", p.id); history.pushState({}, "", "/"); render();
+}
+function testingBar() {
+  const p = currentProfile();
+  const url = currentUrl();
+  return h("div", { class: "notice info", style: "display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px" },
+    h("span", {}, t("ma_testing"), ": ", h("b", {}, p ? p.name : t("ma_unsaved")), S.version ? h("span", { class: "pill neutral", style: "margin-left:8px" }, S.version) : ""),
+    url ? h("span", { class: "muted small" }, url) : "",
+    h("span", { class: "spacer" }),
+    h("button", { type: "button", class: "btn small", onclick: () => { S.view = "agents"; history.pushState({}, "", "/agents"); render(); } }, t("ma_change")));
+}
+function saveAgentDialog() {
+  const d = $("#dlg"), body = $("#dlg-body");
+  const p = currentProfile();
+  const name = h("input", { id: "ma-name", value: p && !p.sample ? p.name : "", placeholder: t("ma_name") });
+  const ok = h("button", { type: "button", class: "btn primary" }, t("ma_save"));
+  ok.onclick = () => {
+    const n = name.value.trim(); if (!n) { name.focus(); return; }
+    const mine = store.get("agents", []);
+    const prof = { id: p && !p.sample ? p.id : "a-" + Date.now(), name: n.slice(0, 60), version: S.version || "", type: S.type, url: currentUrl(), desc: S.desc, spec: S.spec };
+    store.set("agents", [...mine.filter((x) => x.id !== prof.id), prof]);
+    S.currentId = prof.id; store.set("currentId", prof.id); d.close(); render();
+  };
+  body.replaceChildren(h("h2", {}, t("ma_save")), h("label", { for: "ma-name" }, t("ma_name")), name,
+    h("div", { class: "actions" }, h("button", { type: "button", class: "btn", onclick: () => d.close() }, t("ma_cancel")), h("span", { class: "spacer" }), ok));
+  d.showModal(); name.focus();
+}
+async function viewAgents(m) {
+  const card = h("section", { class: "card" }, h("h1", {}, t("ma_title")), h("p", { class: "lead" }, t("ma_lead")));
+  const grid = h("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-top:12px" });
+  card.append(grid); m.append(card);
+  let runs = []; try { runs = await call("GET", "/api/runs"); } catch {}
+  for (const p of myAgents()) {
+    // Runs for this agent: same address, and a version label that starts with the profile's version.
+    const mine = runs.filter((r) => r.agent && (r.agent.version || "").startsWith(p.version) && (r.agent.label || "").includes(p.url));
+    const last = mine.length ? mine.reduce((a, b) => (a.startedAt > b.startedAt ? a : b)) : null;
+    const day = last ? last.startedAt.slice(0, 10) : "";
+    const batch = mine.filter((r) => r.startedAt.slice(0, 10) === day).slice(0, 50);
+    const proven = batch.filter((r) => r.verdict === "PASS").length;
+    const kind = AGENT_TYPES.find((x) => x.id === p.type);
+    grid.append(h("article", { class: "card", style: "margin:0;display:flex;flex-direction:column;gap:8px" },
+      h("div", { style: "display:flex;gap:10px;align-items:center" },
+        h("span", { class: "logo-mark", "aria-hidden": "true" }, p.name.slice(0, 1).toUpperCase()),
+        h("div", {}, h("b", {}, p.name), h("div", {}, h("span", { class: "pill neutral" }, p.version || "-"), p.sample ? h("span", { class: "muted small", style: "margin-left:6px" }, t("ma_sample")) : ""))),
+      h("div", { class: "muted small" }, kind ? L(kind.name) : p.type, " · ", p.url),
+      h("div", { class: "small" }, last ? h("span", { class: "pill " + (proven === batch.length ? "ok" : "bad") }, t("ma_last", { d: new Date(last.startedAt).toLocaleString(lang), p: proven, n: batch.length })) : h("span", { class: "muted" }, t("ma_never"))),
+      h("div", { class: "actions", style: "margin-top:auto" },
+        h("button", { type: "button", class: "btn primary small", onclick: () => useAgent(p) }, t("ma_test")),
+        p.sample ? "" : h("button", { type: "button", class: "btn small", onclick: () => { store.set("agents", store.get("agents", []).filter((x) => x.id !== p.id)); render(); } }, t("ma_delete")))));
+  }
+}
+
 // ---------------------------------------------------------------- boot
 function route() {
   const run = /^\/run\/([0-9a-f-]{36})$/.exec(location.pathname);
   if (run) { S.view = "run"; S.runDetail = run[1]; }
   else if (location.pathname === "/connections") S.view = "connections";
+  else if (location.pathname === "/agents") S.view = "agents";
   else S.view = "wizard";
   render();
 }
