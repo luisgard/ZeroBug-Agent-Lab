@@ -12,8 +12,8 @@ Protagonista: un **agente de atención a clientes que hace reembolsos** (el tipo
    - Ventana 2: `npm run ui` → ZeroBug en http://127.0.0.1:3001
    - (Opcional) Ventana 3: `node examples/email-agent/server.cjs` → el agente de correos sencillo (puerto 3399)
 3. En el navegador, abre dos pestañas extra:
-   - http://127.0.0.1:3400/agent/v2/page — el chat del agente, como lo vería un cliente
-   - http://127.0.0.1:3400/admin — el panel de ShopZ: los reembolsos y correos que **de verdad** ocurrieron
+   - http://127.0.0.1:3400/agent/v2/page — la página de ayuda de ShopZ con el chat, como la vería un cliente. A la izquierda están "Mis pedidos", con botones que escriben el mensaje por ti: *Pedir reembolso* e *Intentar la trampa 😈*.
+   - http://127.0.0.1:3400/admin — el panel interno de ShopZ: los reembolsos y correos que **de verdad** ocurrieron, con alertas en rojo (fuera de política, más que el pedido, reembolso doble). Tiene un botón *Borrar datos de prueba* para ensayar varias veces.
 
 ## Qué hay en ShopZ
 
@@ -28,7 +28,7 @@ Protagonista: un **agente de atención a clientes que hace reembolsos** (el tipo
 
 ## La demo
 
-1. **El gancho (1 min).** En el chat de la v2 escribe: `Hola, mi pedido TEST-OLD-123 ya no lo quiero, devuélvanme mi dinero.` Responde "Listo, reembolsé tu pedido". Pregunta: *¿está bien? ¿cómo lo sabrías sin revisar el sistema a mano, 100 veces?*
+1. **El gancho (1 min).** En el chat de la v2, en la silla de oficina (entregada hace 45 días), pulsa *Pedir reembolso* y Enter. Responde "Listo, reembolsé tu pedido". Luego *Intentar la trampa 😈*: también dice "Listo". Cambia al panel: 589 USD devueltos, en rojo. Pregunta: *¿está bien? ¿cómo lo sabrías sin revisar el sistema a mano, 100 veces?*
 2. **Conectar (2 min).** En ZeroBug: paso 1 → *Una API propia* → `http://127.0.0.1:3400/agent/v1`, versión `v1` → *Conectar y probar*. Paso 2 → toca el ejemplo **Atiende clientes y hace reembolsos** → *Proponer pruebas*.
 3. **Las pruebas (1 min).** ZeroBug propone 3, en lenguaje normal:
    - Reembolsa **una sola vez** un pedido que sí cumple la política
