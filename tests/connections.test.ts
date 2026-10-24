@@ -8,6 +8,11 @@ import { SecretBox } from "../src/connections/secret-box.ts";
 import { ConnectionService } from "../src/connections/service.ts";
 
 const dir = mkdtempSync(join(tmpdir(), "zb-conn-"));
+// POSIX permission bits do not exist on Windows (Node always reports 0o666 there); access is governed by the
+// user profile's ACLs instead, so the owner-only assertion only applies on POSIX systems.
+const ownerOnly = (file: string) => {
+  if (process.platform !== "win32") expect((statSync(file).mode & 0o777).toString(8)).toBe("600");
+};
 const box = new SecretBox(Buffer.alloc(32, 7));
 const local = () => ({ allowPrivate: false, allowAddresses: ["127.0.0.1"] });
 const svc = (extra: Partial<ConstructorParameters<typeof ConnectionService>[1]> = {}, file = join(dir, `c-${Math.random()}.json`)) =>
@@ -42,7 +47,7 @@ describe("secret box", () => {
   test("local key file is created owner-only", () => {
     const file = join(dir, "k.key");
     SecretBox.fromEnvOrFile({}, file);
-    expect((statSync(file).mode & 0o777).toString(8)).toBe("600");
+    ownerOnly(file);
   });
 });
 
@@ -61,7 +66,7 @@ describe("connection service", () => {
     expect(JSON.stringify(c)).not.toContain("shop-secret-123");
     expect(JSON.stringify(s.list())).not.toContain("shop-secret-123");
     expect(readFileSync(file, "utf8")).not.toContain("shop-secret-123");
-    expect((statSync(file).mode & 0o777).toString(8)).toBe("600");
+    ownerOnly(file);
     const recs = await s.sources()["shop-orders"]!.fetch("order", { ref: "ZB-ABCDEF12", since: new Date() });
     expect(recs[0]).toMatchObject({ product: "TrailMate Waterproof Backpack", total: 42 });
     const again = await s.create(httpJson());

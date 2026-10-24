@@ -2,6 +2,8 @@
  * Encrypts connection secrets at rest (AES-256-GCM). The key comes from ZB_SECRET_KEY (32 bytes,
  * base64) or, for local use, a key file created once with owner-only permissions.
  * Secrets are decrypted only inside the server process and never sent to the browser.
+ * On Windows, POSIX permission bits are not available: the key file is protected by the user
+ * profile's ACLs, so set ZB_SECRET_KEY instead of relying on the file on shared machines.
  */
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";

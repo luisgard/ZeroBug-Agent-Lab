@@ -123,6 +123,7 @@ Luego, en la interfaz:
 | Puerto 3000/3001 ocupado | `ZB_UI_PORT=3101 ZB_BRIDGE_PORT=3100 npm run ui` |
 | "Entrar con Google" no aparece | Faltan `ZB_GOOGLE_CLIENT_ID` / `ZB_GOOGLE_CLIENT_SECRET`. Mientras, usa "Conectar con un token existente". |
 | Browser chat: "Playwright is not installed" | `npx playwright install chromium` |
+| En Windows, compartes la PC con otras personas | Define `ZB_SECRET_KEY` en `.env.local`: Windows no aplica permisos de "solo el dueño" al archivo `data/.zb-secret.key` como Linux/macOS. |
 | La prueba tarda ~2 minutos en dar FAIL | Es correcto: espera hasta 120 s a que llegue el correo antes de concluir que no llegó. |
 
 ## 10. Subir los commits a GitHub (opcional)
