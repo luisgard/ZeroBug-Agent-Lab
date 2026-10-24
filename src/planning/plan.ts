@@ -67,14 +67,18 @@ export async function buildPlan(req: PlanRequest, sources: AvailableSource[], mo
 }
 
 /** Decides readiness from the real connections, never from what the planner claims exists. */
-export function planAccess(g: GeneratedScenario, sources: AvailableSource[]): PlannedScenario {
+export function planAccess(g: GeneratedScenario, sources: AvailableSource[], chosen: Partial<Record<NeedKind, string>> = {}): PlannedScenario {
   const assignments: Partial<Record<NeedKind, string>> = {};
+  const choices: Partial<Record<NeedKind, string[]>> = {};
   const missing: NeedKind[] = [];
   const unverified: string[] = [];
   for (const need of g.needs) {
     const candidates = sources.filter((s) => s.provides.includes(need.kind));
-    const pick = candidates.find((s) => s.verified) ?? candidates[0];
-    if (!pick) missing.push(need.kind);
+    // Several connections can check the same thing (e.g. two inboxes): never guess which one the
+    // agent writes to. Reading the wrong one turns a correct agent into a false FAIL.
+    const pick = candidates.length === 1 ? candidates[0] : candidates.find((s) => s.name === chosen[need.kind]);
+    if (!candidates.length) missing.push(need.kind);
+    else if (!pick) choices[need.kind] = candidates.map((s) => s.name);
     else {
       assignments[need.kind] = pick.name;
       if (!pick.verified) unverified.push(pick.name);
@@ -88,6 +92,11 @@ export function planAccess(g: GeneratedScenario, sources: AvailableSource[]): Pl
   }
   if (missing.length) {
     return { ...g, assignments, readiness: "NEEDS_ACCESS", readinessReason: `Missing evidence source for: ${missing.join(", ")}` };
+  }
+  const ambiguous = Object.entries(choices);
+  if (ambiguous.length) {
+    const list = ambiguous.map(([kind, names]) => `${kind}: ${names!.join(", ")}`).join("; ");
+    return { ...g, assignments, choices, readiness: "NEEDS_REVIEW", readinessReason: `More than one connection can check this (${list}). Pick which one this agent uses.` };
   }
   if (unverified.length) {
     return { ...g, assignments, readiness: "NEEDS_REVIEW", readinessReason: `Connection not verified: ${unverified.join(", ")} (test it in Connections)` };

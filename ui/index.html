@@ -192,7 +192,7 @@ const T = {
     p_title: "Te proponemos {n} pruebas", p_title1: "Te proponemos 1 prueba", p_title0: "No encontramos qué probar",
     p_lead: "Activa las que quieras. Solo corren las que ZeroBug puede comprobar de verdad.",
     p_ai_fallback: "La IA no logró proponer pruebas válidas esta vez (abajo verás por qué), así que usamos las reglas básicas.", p_rules: "Diseñadas con reglas básicas. Con una clave de OpenAI, la IA diseña pruebas más completas.", p_ai: "Diseñadas con IA (OpenAI Agents API) y revisadas con reglas.",
-    p_need_title: "Primero conecta dónde vas a comprobar los resultados", p_need_lead: "Las pruebas se activan solas cuando ZeroBug puede leer esos sistemas (solo lectura).", p_ready: "Lista", p_access: "Falta conectar {x}", p_review: "Revisa antes de correr", p_unsupported: "No soportada",
+    p_need_title: "Primero conecta dónde vas a comprobar los resultados", p_need_lead: "Las pruebas se activan solas cuando ZeroBug puede leer esos sistemas (solo lectura).", p_ready: "Lista", p_access: "Falta conectar {x}", p_review: "Revisa antes de correr", p_pick_title: "¿Dónde deja huella este agente?", p_pick_lead: "Tienes más de una conexión que podría servir. Elige la que usa este agente; ZeroBug nunca adivina, porque leer la equivocada daría resultados falsos.", p_pick_none: "Elige una…", p_pick_needed: "Elige la conexión arriba", p_unsupported: "No soportada",
     p_expect: "Lo que esperamos (puedes ajustarlo a tu sistema)", p_expect_h: "Vacío = no se revisa. {ref} se cambia por la referencia única de cada corrida.",
     e_to: "Destinatario", e_subject: "El asunto contiene", e_exactly: "Exactamente cuántos", e_wait: "Esperar hasta (segundos)", e_amount: "Monto", e_currency: "Moneda (ej. USD, MXN)", e_status: "Estado", e_product: "El producto contiene", e_qty: "Cantidad", e_maxtotal: "Total máximo", e_none: "(no se revisa)",
     p_details: "Ver detalles", p_task: "Lo que le pediremos a tu agente", p_checks: "Lo que vamos a comprobar", p_limits: "A tener en cuenta",
@@ -247,7 +247,7 @@ const T = {
     p_title: "We propose {n} tests", p_title1: "We propose 1 test", p_title0: "We couldn't find what to test",
     p_lead: "Turn on the ones you want. Only tests ZeroBug can really verify will run.",
     p_ai_fallback: "The AI couldn't propose valid tests this time (see why below), so the basic rules were used.", p_rules: "Designed with basic rules. With an OpenAI key, AI designs more complete tests.", p_ai: "Designed with AI (OpenAI Agents API) and checked with rules.",
-    p_need_title: "First connect where results will be checked", p_need_lead: "Tests turn on by themselves once ZeroBug can read those systems (read-only).", p_ready: "Ready", p_access: "Connect {x} first", p_review: "Review before running", p_unsupported: "Not supported",
+    p_need_title: "First connect where results will be checked", p_need_lead: "Tests turn on by themselves once ZeroBug can read those systems (read-only).", p_ready: "Ready", p_access: "Connect {x} first", p_review: "Review before running", p_pick_title: "Where does this agent leave its trace?", p_pick_lead: "More than one connection could work. Pick the one this agent uses; ZeroBug never guesses, because reading the wrong one would give false results.", p_pick_none: "Choose one…", p_pick_needed: "Pick the connection above", p_unsupported: "Not supported",
     p_expect: "What we expect (adjust it to your system)", p_expect_h: "Empty = not checked. {ref} becomes each run's unique reference.",
     e_to: "Recipient", e_subject: "Subject contains", e_exactly: "Exactly how many", e_wait: "Wait up to (seconds)", e_amount: "Amount", e_currency: "Currency (e.g. USD, MXN)", e_status: "Status", e_product: "Product contains", e_qty: "Quantity", e_maxtotal: "Max total", e_none: "(not checked)",
     p_details: "See details", p_task: "What we'll ask your agent", p_checks: "What we'll verify", p_limits: "Keep in mind",
@@ -477,6 +477,7 @@ async function proposeTests(btn, msg) {
   try {
     S.plan = await call("POST", "/api/plan", { description: S.desc, specifics: S.spec, lang, agentMode: agentType().plan });
     S.picks = Object.fromEntries(S.plan.scenarios.map((s) => [s.id, { on: s.readiness === "READY", task: s.task, approved: false, checks: {} }]));
+    S.sourceChoice = {};
     S.step = 3; render();
   } catch (e) { msg && msg.replaceChildren(h("div", { class: "notice bad" }, e.message)); if (btn) btn.disabled = false; }
 }
@@ -484,7 +485,7 @@ async function proposeTests(btn, msg) {
 /** After a new connection: re-check which tests are ready, keeping the person's choices and edits. */
 async function refreshAccess() {
   try {
-    const plan = await call("POST", `/api/plan/${S.plan.planId}/access`, {});
+    const plan = await call("POST", `/api/plan/${S.plan.planId}/access`, { sources: S.sourceChoice || {} });
     for (const sc of plan.scenarios) {
       const was = S.plan.scenarios.find((x) => x.id === sc.id);
       if (sc.readiness === "READY" && was && was.readiness !== "READY" && S.picks[sc.id]) S.picks[sc.id].on = true;
@@ -523,6 +524,22 @@ function stepTests(m) {
   const head = h("section", { class: "card" }, h("h1", {}, n === 0 ? t("p_title0") : n === 1 ? t("p_title1") : t("p_title", { n })), h("p", { class: "lead" }, t("p_lead")),
     h("div", { class: "notice " + (p.planner.kind === "agents_api" ? "info" : "neutral"), style: "margin-top:0" }, p.planner.kind === "agents_api" ? t("p_ai") : /AI planner|Agents API planner failed/.test(p.planner.note || "") ? t("p_ai_fallback") : t("p_rules")));
   m.append(head);
+  // More than one connection can check the same thing: the person picks; ZeroBug never guesses.
+  const choiceKinds = {};
+  for (const s of p.scenarios) for (const [k, names] of Object.entries(s.choices || {})) choiceKinds[k] = [...new Set([...(choiceKinds[k] || []), ...names])];
+  for (const k of Object.keys(S.sourceChoice || {})) if (!choiceKinds[k]) choiceKinds[k] = null;
+  const kinds = Object.keys(choiceKinds).filter((k) => choiceKinds[k]);
+  if (kinds.length) {
+    m.append(h("section", { class: "card", style: "border-color:var(--warn);" },
+      h("h2", {}, t("p_pick_title")),
+      h("p", { class: "muted", style: "margin-top:0" }, t("p_pick_lead")),
+      ...kinds.map((k) => {
+        const sel = h("select", { id: "src-" + k, "aria-label": t("k_" + k) }, h("option", { value: "" }, t("p_pick_none")), ...choiceKinds[k].map((n) => h("option", { value: n }, n)));
+        sel.value = (S.sourceChoice || {})[k] || "";
+        sel.onchange = () => { S.sourceChoice = { ...(S.sourceChoice || {}), [k]: sel.value }; if (!sel.value) delete S.sourceChoice[k]; refreshAccess(); };
+        return h("div", {}, h("label", { for: "src-" + k }, t("k_" + k)), sel);
+      })));
+  }
   const missingKinds = [...new Set(p.scenarios.filter((s) => s.readiness === "NEEDS_ACCESS").flatMap((s) => s.needs.filter((n) => !s.assignments[n.kind]).map((n) => n.kind)))];
   if (missingKinds.length) {
     m.append(h("section", { class: "card", style: "border-color:var(--warn);" },
@@ -551,7 +568,7 @@ function stepTests(m) {
     if (!items.length) { err.replaceChildren(h("div", { class: "notice bad" }, t("p_none_on"))); return; }
     runBtn.disabled = true;
     try {
-      const r = await call("POST", "/api/plan/run", { planId: p.planId, agent: agentSpec(), items });
+      const r = await call("POST", "/api/plan/run", { planId: p.planId, agent: agentSpec(), sources: S.sourceChoice || {}, items });
       S.runIds = r.runIds; S.runScen = items.flatMap((it) => Array(it.repeats).fill(it.scenarioId)); S.runTitles = Object.fromEntries(p.scenarios.map((s) => [s.id, s.title])); S.step = 4; render();
     } catch (e) { err.replaceChildren(h("div", { class: "notice bad" }, e.message)); runBtn.disabled = false; }
   };
@@ -566,7 +583,7 @@ function testCard(s) {
   const missing = s.needs.filter((n) => !s.assignments[n.kind]).map((n) => n.kind);
   const status = ready ? h("span", { class: "pill ok" }, "✓ ", t("p_ready"))
     : s.readiness === "NEEDS_ACCESS" ? h("span", { class: "pill warn" }, t("p_access", { x: missing.map((k) => t("k_" + k)).join(", ") || t("k_email") }))
-    : s.readiness === "NEEDS_REVIEW" ? h("span", { class: "pill info" }, t("p_review")) : h("span", { class: "pill neutral" }, t("p_unsupported"));
+    : s.readiness === "NEEDS_REVIEW" ? h("span", { class: "pill info" }, s.choices && Object.keys(s.choices).length ? t("p_pick_needed") : t("p_review")) : h("span", { class: "pill neutral" }, t("p_unsupported"));
   const sw = h("input", { type: "checkbox", id: "on-" + s.id, role: "switch", "aria-label": s.title });
   sw.checked = pick.on; sw.disabled = !ready;
   const card = h("article", { class: "test" + (pick.on ? "" : " off") });

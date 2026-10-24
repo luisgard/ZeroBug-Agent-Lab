@@ -43,6 +43,8 @@ export type PlannedScenario = GeneratedScenario & {
   readinessReason: string;
   /** Need kind -> connection/source name chosen by the access planner. */
   assignments: Partial<Record<NeedKind, string>>;
+  /** Need kind -> every connection that could serve it, when more than one does and none was chosen. */
+  choices?: Partial<Record<NeedKind, string[]>>;
 };
 
 export type PlannerInfo = { name: string; kind: "agents_api" | "offline_rules"; note: string };

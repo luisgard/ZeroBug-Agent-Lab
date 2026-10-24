@@ -84,9 +84,12 @@ const AgentSpec = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("mcp_agent"), url: z.string().url(), headers: Headers.optional(), tool: z.string().max(128).optional(), argument: z.string().max(128).optional(), label: z.string().max(80).optional(), version: z.string().max(80).optional() }),
   z.strictObject({ kind: z.literal("chat_completions"), baseUrl: z.string().url(), model: z.string().trim().min(1, "Model is empty").max(200), apiKey: z.string().max(4000).optional(), label: z.string().max(80).optional(), version: z.string().max(80).optional() }),
 ]);
+/** Which connection to read per kind, when more than one could (chosen by the person in step 3). */
+const SourceChoice = z.partialRecord(z.enum(["email", "order", "payment"]), z.string().max(80)).default({});
 const PlanRun = z.strictObject({
   planId: z.string().min(8).max(40),
   agent: AgentSpec,
+  sources: SourceChoice,
   items: z
     .array(
       z.strictObject({
@@ -228,7 +231,8 @@ async function api(method: string, path: string, body: unknown): Promise<unknown
     const plan = plans.get(accessMatch[1]!);
     if (!plan) throw new HttpError(404, "Plan not found or expired; propose the tests again.");
     const sourcesNow = availableSources();
-    plan.scenarios = plan.scenarios.map((p) => planAccess(p, sourcesNow));
+    const chosen = parse(z.strictObject({ sources: SourceChoice }), body ?? {}).sources;
+    plan.scenarios = plan.scenarios.map((p) => planAccess(p, sourcesNow, chosen));
     return plan;
   }
   if (method === "POST" && path === "/api/plan/run") {
@@ -241,7 +245,7 @@ async function api(method: string, path: string, body: unknown): Promise<unknown
     const compiled = reqRun.items.map((item) => {
       const p = plan.scenarios.find((x) => x.id === item.scenarioId);
       if (!p) throw new HttpError(400, `Unknown test: ${item.scenarioId}`);
-      const fresh = planAccess(p, sourcesNow); // re-check access at run time, never trust the earlier answer
+      const fresh = planAccess(p, sourcesNow, reqRun.sources); // re-check access at run time, never trust the earlier answer
       if (fresh.readiness !== "READY") throw new HttpError(400, `"${p.title}" is not ready: ${fresh.readinessReason}`);
       if (p.approvalRequired && !item.approved) throw new HttpError(400, `"${p.title}" has real-world effects and needs your explicit approval.`);
       try {
