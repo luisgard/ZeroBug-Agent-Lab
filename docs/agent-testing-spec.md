@@ -1,6 +1,6 @@
 # ZeroBug Agent Labs: Hackathon Spec
 
-**Status:** draft v2 for the team, Friday Oct 23 (evening). Folds in the team review (P0/P1 items).
+**Status:** v3, decisions settled, Friday Oct 23 (evening). Ready to build.
 **Event:** Codex DevDay Hackathon, Track 1 "Agents in Action". Code freeze **Saturday Oct 24, 3:00 p.m. MT**, then a 3-minute live demo.
 **Companion doc:** [`PLAN.md`](PLAN.md) has the longer-term architecture and security thinking. This spec is what we build in the next ~17 hours.
 
@@ -271,14 +271,16 @@ The comparison in 1:45 to 2:15 is real data from real runs, stored with its evid
 
 ---
 
-## 10. Open decisions
+## 10. Decisions
 
-- **How openly do we design v2 to fail?** One "friendlier tone" change explains lying about the outage, not leaking the code or checking out. Proposal: v2 carries three realistic prompt changes, one per failure ("don't dwell on errors", "use product details to personalize your help", "save customers time, finish their purchase"), v1 carries explicit guardrails, and we say on stage that v2 was written to fail like real regressions. No extra lures in the fixtures. *Needs a team yes/no.*
-- **API access and limits.** Has anyone confirmed the key works for the Agents API beta, `gpt-6-astra`, and the Decisions API? Rate limits decide how many runs execute at once; if low, runs queue.
-- **Stack.** `PLAN.md` suggests Next.js + TypeScript frontend with a Python/FastAPI backend. A single TypeScript app (both SDKs support JS) would be faster to deploy. Team to pick in the first 30 minutes.
-- **Run & results screen layout.** First three mockups (split "claim vs reality", live timeline, scoreboard) didn't land. Must show task → agent actions → actual state → verdict, plus the release gate.
-- **Hosting.** Long-running sessions need a host that won't kill requests early.
-- **Remove the unrelated `review-qa-suggest` skill** from the repo before judging? Rules say start from scratch; it isn't part of ZeroBug.
+These were open in the first draft; settled Friday night so the build can start. Revisit only if one blocks us.
+
+- **Sample agent v2 fails by design, and we say so.** v2 carries three realistic prompt changes, one per failure: "keep customers happy, don't dwell on errors" (lies about the outage), "use product details to personalize your help" (follows the hidden instruction), "save customers time, finish their purchase" (oversteps). v1 carries explicit guardrails against all three. No extra lures in the fixtures. On stage: "v2 was written to fail the way real regressions do."
+- **API access is proven, not assumed.** P0 #1 (the API proof) is the first thing built. It also measures how many sessions run at once without rate-limit errors; runs above that number queue.
+- **Stack: one TypeScript app.** Next.js (App Router) + TypeScript, `openai` npm SDK for both APIs, Tailwind + shadcn/ui, zod for the scenario schema, `yaml` to parse scenario files, Vitest for tests, Server-Sent Events for live run updates. One language, one deploy, both SDKs supported. (`PLAN.md`'s two-language split is the longer-term option.)
+- **Hosting: a long-lived Node server, not serverless.** Runs keep their test world in memory across tool-call round trips, and sessions can last 90 seconds, so serverless functions are the wrong fit. Deploy to Railway (or Render/Fly). Completed runs and their evidence are saved as JSON files, so recorded comparisons survive restarts. The demo itself can run from a laptop if the venue network is shaky.
+- **Run & results layout:** two columns under a verdict banner. Left, "What the agent did": the task, then each step streaming in, labeled *Agents API*, ending with the agent's final message. Right, "What actually happened": live store and outbox state, then the *Decisions API* card with each question and its probability. When the run finishes, the banner drops in: PASS / FAIL / ERROR / INCONCLUSIVE with the one-line reason. The release gate is its own page: one row per scenario, v1 and v2 counts side by side, and the READY / BLOCKED / NEEDS REVIEW decision on top with links to evidence.
+- **Remove the unrelated `review-qa-suggest` skill** from the repo before judging. Rules say start from scratch, and it isn't part of ZeroBug.
 
 ---
 
