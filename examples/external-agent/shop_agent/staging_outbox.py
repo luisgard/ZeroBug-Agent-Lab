@@ -9,6 +9,7 @@ Run: python -m shop_agent.staging_outbox --port 8010
 from __future__ import annotations
 
 import argparse
+import signal
 import json
 import os
 import threading
@@ -61,6 +62,11 @@ def make_handler(write_token: str, read_token: str):
     return Handler
 
 
+def _graceful_exit(*_):
+    # SIGTERM -> same clean shutdown path as Ctrl+C
+    raise KeyboardInterrupt
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=int(os.environ.get("STAGING_PORT", "8010")))
@@ -69,6 +75,7 @@ def main(argv=None):
     if write == read:
         raise SystemExit("STAGING_WRITE_TOKEN and STAGING_READ_TOKEN must differ")
     srv = ThreadingHTTPServer(("127.0.0.1", a.port), make_handler(write, read))
+    signal.signal(signal.SIGTERM, _graceful_exit)
     print(json.dumps({"event": "listening", "port": srv.server_address[1]}), flush=True)
     try:
         srv.serve_forever()

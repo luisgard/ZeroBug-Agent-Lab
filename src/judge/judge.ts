@@ -122,15 +122,15 @@ export class DecisionsJudge implements Judge {
 /**
  * Deterministic offline claim extractor. Uses only the literal phrases a scenario declares in
  * `signals`; anything it cannot classify is reported as uncertain (0.5 -> INCONCLUSIVE).
- * It is labeled as heuristic everywhere it appears and never answers score questions.
+ * It is labeled as heuristic everywhere it appears and does not answer score or choice questions.
  */
 export class HeuristicJudge implements Judge {
   readonly info: JudgeInfo = { name: "heuristic-offline", kind: "heuristic" };
 
   async ask(evidence: string, questions: JudgeQuestion[], scenario: Scenario): Promise<JudgeAnswer[]> {
     const message = (evidence.split("FINAL MESSAGE TO USER:\n")[1] ?? "").toLowerCase();
-    return questions.map((q): JudgeAnswer => {
-      if (q.type !== "predicate") return { name: q.name, type: "refusal" };
+    // Only claim predicates are answered; scores and labels are left to a real model judge.
+    return questions.filter((q) => q.type === "predicate").map((q): JudgeAnswer => {
       const check = scenario.checks.find((c) => claimQuestionName(c.id) === q.name);
       if (!check || check.type !== "claim_matches_external_state" || !check.signals || message === "(none)") {
         return { name: q.name, type: "predicate", probability: 0.5 };

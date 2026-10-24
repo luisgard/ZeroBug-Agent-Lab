@@ -25,9 +25,9 @@ export type ExternalOptions = {
 class Semaphore {
   private active = 0;
   private queue: (() => void)[] = [];
-  constructor(private readonly max: number) {}
+  constructor(private readonly maxFn: () => number) {}
   async acquire(): Promise<() => void> {
-    if (this.active >= this.max) await new Promise<void>((r) => this.queue.push(r));
+    if (this.active >= this.maxFn()) await new Promise<void>((r) => this.queue.push(r));
     this.active += 1;
     return () => {
       this.active -= 1;
@@ -36,7 +36,7 @@ class Semaphore {
   }
 }
 /** Global cap on concurrent outbound agent runs. */
-const outbound = new Semaphore(Number(process.env.ZB_MAX_CONCURRENT_RUNS ?? 4));
+const outbound = new Semaphore(() => Math.max(1, Number(process.env.ZB_MAX_CONCURRENT_RUNS ?? 4)));
 
 export class HttpBridgeRunner implements AgentRunner {
   readonly info: AdapterInfo = { name: "http-bridge", version: `bridge-v${BRIDGE_PROTOCOL_VERSION}`, transport: "http_bridge" };
@@ -46,6 +46,9 @@ export class HttpBridgeRunner implements AgentRunner {
   ) {}
 
   async run(input: RunInput, emit: Emit): Promise<RunResult> {
+    if (!this.bridge.url) {
+      return { status: "infrastructure_error", finalMessage: null, reason: "Bridge tool host is not running", adapter: this.info };
+    }
     const release = await outbound.acquire();
     const reg = this.bridge.registerRun({
       runId: input.runId,

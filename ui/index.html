@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ZeroBug Agent Labs</title>
+<style>
+  :root { --bg:#0e1116; --panel:#161b22; --line:#2b313a; --text:#e6edf3; --muted:#8b949e; --pass:#2ea043; --fail:#f85149; --err:#d29922; --inc:#a371f7; --accent:#58a6ff; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui, -apple-system, Segoe UI, sans-serif; }
+  header { padding:16px 24px; border-bottom:1px solid var(--line); display:flex; gap:24px; align-items:baseline; flex-wrap:wrap; }
+  header h1 { margin:0; font-size:20px; } header .tag { color:var(--muted); }
+  nav { display:flex; gap:4px; padding:8px 24px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  nav button, .tabs button { background:none; border:1px solid transparent; color:var(--muted); padding:6px 12px; border-radius:6px; cursor:pointer; font:inherit; }
+  nav button.on, .tabs button.on { color:var(--text); border-color:var(--line); background:var(--panel); }
+  main { padding:20px 24px; max-width:1300px; margin:0 auto; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:16px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; } @media (max-width:900px){ .grid2{grid-template-columns:1fr;} }
+  input, textarea, select { width:100%; background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:8px; font:inherit; }
+  label { display:block; color:var(--muted); font-size:13px; margin:10px 0 4px; }
+  button.primary { background:var(--accent); color:#04111f; border:0; padding:8px 14px; border-radius:6px; font-weight:600; cursor:pointer; margin-top:12px; }
+  button.primary:disabled { opacity:.4; cursor:not-allowed; }
+  table { width:100%; border-collapse:collapse; font-size:14px; } td, th { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:500; }
+  .badge { display:inline-block; padding:1px 8px; border-radius:10px; font-size:12px; font-weight:700; }
+  .PASS,.pass,.VERIFIED,.READY{ background:#12351d; color:var(--pass);} .FAIL,.fail,.BLOCKED{ background:#3d1517; color:var(--fail);} .ERROR,.error{ background:#3a2c0b; color:var(--err);} .INCONCLUSIVE,.inconclusive,.unsupported,.UNSUPPORTED,.REVIEW{ background:#2a1f45; color:var(--inc);} .DECLARED{ background:#1c2a3d; color:var(--accent);} .running{background:#1c2a3d;color:var(--accent);}
+  .banner { font-size:22px; font-weight:800; padding:14px 16px; border-radius:8px; margin-bottom:16px; }
+  .muted { color:var(--muted); } .small { font-size:13px; } .err { color:var(--fail); }
+  .step { border-left:3px solid var(--line); padding:4px 10px; margin:6px 0; font-family: ui-monospace, monospace; font-size:13px; white-space:pre-wrap; word-break:break-word; }
+  .step.call{border-color:var(--accent);} .step.okr{border-color:var(--pass);} .step.bad{border-color:var(--fail);} .step.msg{border-color:var(--inc); font-family:inherit; font-size:14px;} .step.eff{border-color:var(--err);}
+  pre { white-space:pre-wrap; word-break:break-word; font-size:12px; background:var(--bg); padding:8px; border-radius:6px; max-height:300px; overflow:auto; }
+  .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; } .row > * { flex:1; min-width:160px; }
+  .scen { border:1px solid var(--line); border-radius:8px; padding:10px; margin:8px 0; } .scen input{ width:auto; margin-right:8px; }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<header><h1>ZeroBug Agent Labs</h1><span class="tag">Agents report. ZeroBug proves.</span><span id="meta" class="muted small"></span></header>
+<nav id="nav"></nav>
+<main id="main"></main>
+<script>
+const $ = (sel) => document.querySelector(sel);
+function h(tag, attrs = {}, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (k === "class") el.className = v;
+    else if (v !== false && v != null) el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) el.append(c instanceof Node ? c : document.createTextNode(String(c))); // text only: agent output is untrusted
+  return el;
+}
+const badge = (t, cls = t) => h("span", { class: `badge ${cls}` }, t);
+async function call(method, path, body) {
+  const res = await fetch(path, { method, headers: { "content-type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+  const data = await res.json().catch(() => ({ error: "Bad response" }));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+const state = { meta: null, agent: null, agentLabel: "none selected", scenarios: [], connectTab: "samples", lastRunIds: [] };
+const views = { connect: viewConnect, scenarios: viewScenarios, runs: viewRuns, gate: viewGate };
+function nav(active) {
+  const n = $("#nav"); n.replaceChildren();
+  for (const [k, label] of [["connect", "1 · Connect agent"], ["scenarios", "2 · Scenarios & run"], ["runs", "3 · Runs"], ["gate", "4 · Release gate"]])
+    n.append(h("button", { class: active === k ? "on" : "", onclick: () => go(k) }, label));
+}
+function go(view, arg) { history.pushState({}, "", view === "run" ? `/run/${arg}` : "/"); render(view, arg); }
+function render(view, arg) { nav(view); const m = $("#main"); m.replaceChildren(); (view === "run" ? viewRun : views[view])(m, arg); }
+
+// ---------------------------------------------------------------- connect
+function viewConnect(m) {
+  const tabs = [["samples", "Sample agents"], ["agents_api", "Agents API"], ["http_bridge", "External Agent / HTTP Bridge"], ["blackbox_http", "Black-box HTTP"], ["browser", "Browser agent"]];
+  const t = h("div", { class: "tabs row" }); for (const [k, l] of tabs) t.append(h("button", { class: state.connectTab === k ? "on" : "", onclick: () => { state.connectTab = k; render("connect"); } }, l));
+  m.append(h("div", { class: "panel" }, h("div", { class: "muted small" }, "Selected agent: ", h("b", {}, state.agentLabel)), t));
+  const p = h("div", { class: "panel" }); m.append(p);
+  if (state.connectTab === "samples") {
+    p.append(h("p", { class: "muted" }, "Deterministic scripted agents (no model calls). Labeled as scripted in every result."));
+    for (const s of state.meta.samples) p.append(h("div", { class: "row" }, h("div", {}, s.label), h("button", { class: "primary", onclick: () => select({ kind: "sample", id: s.id }, s.label) }, "Use this agent")));
+  }
+  if (state.connectTab === "agents_api") {
+    const blocked = state.meta.agentsApi !== "available";
+    const ins = h("textarea", { rows: 5, placeholder: "Agent instructions" }); const model = h("input", { placeholder: "Model (default gpt-6-astra)" });
+    const err = h("div", { class: "err small" });
+    p.append(h("p", {}, "Status: ", badge(blocked ? "BLOCKED" : "VERIFIED", blocked ? "BLOCKED" : "VERIFIED"), " ", h("span", { class: "muted" }, state.meta.agentsApi)),
+      h("label", {}, "Instructions"), ins, h("label", {}, "Model"), model,
+      h("button", { class: "primary", disabled: blocked, onclick: () => { if (!ins.value.trim()) { err.textContent = "Instructions are empty."; return; } select({ kind: "agents_api", instructions: ins.value, ...(model.value ? { model: model.value } : {}) }, `Agents API (${model.value || "gpt-6-astra"})`); } }, "Use this agent"), err);
+  }
+  if (state.connectTab === "http_bridge") {
+    const ep = h("input", { value: "http://127.0.0.1:8000/agent/run" }); const ver = h("input", { placeholder: "Version label, e.g. v1 or git sha" }); const out = h("div");
+    p.append(h("p", { class: "muted" }, "Developer QA (instrumented): the agent calls ZeroBug's run-scoped tool URLs, so every effect is observed in ZeroBug's world. Contract: docs/HTTP-BRIDGE-CONTRACT.md"),
+      h("label", {}, "Agent endpoint (POST /agent/run)"), ep, h("label", {}, "Version label"), ver,
+      h("button", { class: "primary", onclick: () => smoke({ kind: "http_bridge", endpoint: ep.value }, out, () => select({ kind: "http_bridge", endpoint: ep.value, ...(ver.value ? { version: ver.value, label: `Bridge agent ${ver.value}` } : {}) }, `HTTP bridge ${ep.value} ${ver.value}`)) }, "Connect & run smoke test"), out);
+  }
+  if (state.connectTab === "blackbox_http") {
+    const ep = h("input", { value: "http://127.0.0.1:8000/chat" }); const tf = h("input", { value: "message" }); const rf = h("input", { value: "reply" }); const cf = h("input", { value: "conversation_id" });
+    const vu = h("input", { placeholder: "Optional read-only verifier URL (token comes from the server vault)" }); const ver = h("input", { placeholder: "Version label" }); const out = h("div");
+    const spec = () => ({ endpoint: ep.value, mapping: { taskField: tf.value, responseField: rf.value, ...(cf.value ? { correlationField: cf.value } : {}) }, ...(vu.value ? { verifierUrl: vu.value } : {}) });
+    p.append(h("p", { class: "muted" }, "Minimal access: ZeroBug sends a message and reads the reply. It cannot see tool calls or inject faults. Side-effect requirements can PASS only with a separately granted read-only verifier; otherwise they end INCONCLUSIVE."),
+      h("label", {}, "Chat endpoint"), ep, h("div", { class: "row" }, h("div", {}, h("label", {}, "Task field"), tf), h("div", {}, h("label", {}, "Reply field"), rf), h("div", {}, h("label", {}, "Correlation field"), cf)),
+      h("label", {}, "Verifier"), vu, h("label", {}, "Version label"), ver,
+      h("button", { class: "primary", onclick: () => smoke({ kind: "blackbox_http", ...spec() }, out, () => select({ kind: "blackbox_http", ...spec(), ...(ver.value ? { version: ver.value, label: `Black-box ${ver.value}` } : {}) }, `Black-box ${ep.value} ${ver.value}`)) }, "Connect & run smoke test"), out);
+  }
+  if (state.connectTab === "browser") p.append(h("p", {}, badge("NOT AVAILABLE YET", "UNSUPPORTED"), " Browser/UI agents are a P1 item. No integration has been tested, so there are no controls here."));
+}
+async function smoke(body, out, onUse) {
+  out.replaceChildren(h("p", { class: "muted" }, "Running a real smoke task…"));
+  try {
+    const r = await call("POST", "/api/connect", body);
+    const rows = Object.entries(r.capabilities).map(([k, v]) => h("tr", {}, h("td", {}, k), h("td", {}, badge(v.state)), h("td", { class: "small muted" }, v.basis)));
+    out.replaceChildren(
+      h("p", {}, "Smoke: ", badge(r.smoke.ok ? "PASS" : "FAIL"), ` ${r.smoke.status}, ${r.smoke.toolCallsObserved} tool call(s) observed by ZeroBug · run ${r.smoke.runId}`),
+      h("p", { class: "small" }, "Handshake: ", r.handshake.ok ? `declared by ${r.handshake.declared.agent.name} (${r.handshake.declared.agent.framework})` : r.handshake.error),
+      h("table", {}, h("tr", {}, h("th", {}, "Capability"), h("th", {}, "State"), h("th", {}, "Basis")), rows),
+      h("p", {}, h("b", {}, "ZeroBug can independently verify: "), r.canVerify.join("; ") || "nothing beyond the reply"),
+      h("p", {}, h("b", {}, "ZeroBug cannot verify: "), r.cannotVerify.join("; ")),
+      h("button", { class: "primary", disabled: !r.smoke.ok, onclick: onUse }, "Use this agent"));
+  } catch (e) { out.replaceChildren(h("p", { class: "err" }, e.message)); }
+}
+function select(spec, label) { state.agent = spec; state.agentLabel = label; go("scenarios"); }
+
+// ---------------------------------------------------------------- scenarios
+async function viewScenarios(m) {
+  if (!state.scenarios.length) state.scenarios = await call("GET", "/api/scenarios");
+  const err = h("div", { class: "err" });
+  const reps = h("input", { type: "number", min: 1, max: 10, value: 1 });
+  const boxes = state.scenarios.map((s) => {
+    const cb = h("input", { type: "checkbox", value: s.id });
+    return h("div", { class: "scen" }, h("label", { class: "row" }, h("span", { style: "flex:0" }, cb), h("b", {}, s.title), h("span", { class: "muted small" }, `transport: ${s.agentTransport}`)),
+      h("div", {}, s.task), s.faults.length ? h("div", { class: "small" }, "Faults: ", s.faults.map((f) => JSON.stringify(f)).join("; ")) : null,
+      h("div", { class: "small muted" }, "Checks: ", s.checks.map((c) => `${c.id}${c.critical ? " (critical)" : ""}${c.informational ? " (informational)" : ""}${c.type === "claim_matches_external_state" ? " · judge" : ""}`).join(", ")),
+      s.degradedOutcome ? h("div", { class: "small" }, "Degraded policy: ", s.degradedOutcome.description) : null);
+  });
+  m.append(h("div", { class: "panel" }, h("div", {}, "Agent: ", h("b", {}, state.agentLabel)), ...boxes, h("label", {}, "Runs per scenario"), reps,
+    h("button", { class: "primary", onclick: async () => {
+      err.textContent = "";
+      if (!state.agent) { err.textContent = "Select an agent first (step 1)."; return; }
+      const ids = boxes.map((b) => b.querySelector("input")).filter((c) => c.checked).map((c) => c.value);
+      if (!ids.length) { err.textContent = "Select at least one scenario."; return; }
+      try { const r = await call("POST", "/api/runs", { agent: state.agent, scenarioIds: ids, repeats: Number(reps.value) }); state.lastRunIds = r.runIds; go("run", r.runIds[0]); }
+      catch (e) { err.textContent = e.message; }
+    } }, "Start run"), err));
+}
+
+// ---------------------------------------------------------------- run view
+async function viewRun(m, runId) {
+  const head = h("div"); const left = h("div", { class: "panel" }); const right = h("div", { class: "panel" }); const checks = h("div", { class: "panel" });
+  const others = state.lastRunIds.length > 1 ? h("div", { class: "panel small" }, "Runs in this batch: ", ...state.lastRunIds.map((id, i) => [h("a", { href: `/run/${id}`, onclick: (e) => { e.preventDefault(); go("run", id); } }, `#${i + 1}`), " "])) : null;
+  m.append(head, others || "", h("div", { class: "grid2" }, left, right), checks);
+  let stop = false; window.addEventListener("popstate", () => (stop = true), { once: true });
+  for (;;) {
+    let d; try { d = await call("GET", `/api/runs/${runId}`); } catch (e) { head.replaceChildren(h("p", { class: "err" }, e.message)); return; }
+    paint(d); if (d.status === "done" || stop || !location.pathname.endsWith(runId)) return;
+    await new Promise((r) => setTimeout(r, 600));
+  }
+  function paint(d) {
+    const r = d.record;
+    head.replaceChildren(r ? h("div", { class: `banner ${r.verdict}` }, `${r.verdict} — ${r.reason}`) : d.error ? h("div", { class: "banner ERROR" }, `ERROR — ${d.error}`) : h("div", { class: "banner running" }, "Running…"),
+      r ? h("p", { class: "small muted" }, `${r.scenarioId} · run ${r.runId} · ${r.agent.label} @ ${r.agent.version} · adapter ${r.adapter.name}/${r.adapter.version} · judge ${r.judge.name} (advisory) · execution ${r.executionStatus} · outcome ${r.outcome} · task completion ${r.taskCompletion}${d.replayed ? " · replayed from stored events (no side effects repeated)" : ""} · started ${r.startedAt}`) : "");
+    left.replaceChildren(h("h3", {}, "What the agent did"), h("div", { class: "small muted" }, r ? `Transport: ${r.adapter.transport}` : ""),
+      ...d.events.filter((e) => e.type !== "world_effect").map((e) =>
+        e.type === "tool_call" ? h("div", { class: "step call" }, `→ ${e.tool}(${JSON.stringify(e.args)})`) :
+        e.type === "tool_result" ? h("div", { class: `step ${e.ok ? "okr" : "bad"}` }, e.ok ? `← ok ${JSON.stringify(e.result).slice(0, 300)}` : `← error ${e.error}`) :
+        e.type === "message" ? h("div", { class: "step msg" }, h("div", { class: "small muted" }, "Final message (a claim, not proof)"), e.text) :
+        h("div", { class: "step bad" }, `${e.category}: ${e.reason}`)));
+    const effects = d.events.filter((e) => e.type === "world_effect");
+    right.replaceChildren(h("h3", {}, "What actually happened"),
+      r && !r.worldSnapshot ? h("p", { class: "muted" }, `World state not observable (black-box). Verifiers: ${r.verifiers.join(", ")}`) : "",
+      r && r.worldSnapshot ? h("div", {}, h("label", {}, "Cart"), h("pre", {}, JSON.stringify(r.worldSnapshot.cart, null, 1)), h("label", {}, "Orders"), h("pre", {}, JSON.stringify(r.worldSnapshot.orders, null, 1)), h("label", {}, "Outbox (synthetic)"), h("pre", {}, JSON.stringify(r.worldSnapshot.outbox.map((x) => ({ to: x.to, subject: x.subject })), null, 1))) : "",
+      h("label", {}, "World effects (journal)"), ...(effects.length ? effects.map((e) => h("div", { class: "step eff" }, `${e.kind} ${JSON.stringify(e.data)}`)) : [h("div", { class: "muted small" }, "none")]),
+      r && r.faultsFired.length ? h("p", { class: "small" }, "Faults fired: ", r.faultsFired.join("; ")) : "",
+      r && r.judgeAnswers ? h("div", {}, h("label", {}, `Judge (${r.judge.name}) — interpretations, not proof`), ...r.judgeAnswers.map((a) => h("div", { class: "small" }, `${a.name}: ${a.type === "predicate" ? `p=${a.probability}` : a.type === "score" ? `${a.label} (${a.score})` : a.type === "choice" ? `${a.choice} (${a.confidence})` : "refused"}`))) : "");
+    if (!r) return checks.replaceChildren();
+    const ev = Object.fromEntries(r.evidence.map((e) => [e.id, e]));
+    checks.replaceChildren(h("h3", {}, "Checks and evidence"), h("table", {}, h("tr", {}, h("th", {}, "Check"), h("th", {}, "Status"), h("th", {}, "Reason"), h("th", {}, "Evidence")),
+      r.checks.map((c) => h("tr", {}, h("td", {}, c.checkId, c.critical ? h("div", { class: "small muted" }, "critical") : "", c.informational ? h("div", { class: "small muted" }, "informational") : "", c.goal ? h("div", { class: "small muted" }, "goal") : ""), h("td", {}, badge(c.status.toUpperCase(), c.status)), h("td", {}, c.reason, h("div", { class: "small muted" }, `via ${c.verifier}`)),
+        h("td", {}, ...c.evidenceRefs.map((id) => h("details", {}, h("summary", { class: "small" }, id), h("pre", {}, JSON.stringify(ev[id], null, 1)))))))),
+      ...r.notes.map((n) => h("p", { class: "small" }, "Note: ", n)));
+  }
+}
+
+// ---------------------------------------------------------------- runs and gate
+async function viewRuns(m) {
+  const runs = await call("GET", "/api/runs");
+  m.append(h("div", { class: "panel" }, h("table", {}, h("tr", {}, h("th", {}, "Started"), h("th", {}, "Scenario"), h("th", {}, "Agent"), h("th", {}, "Verdict"), h("th", {}, "Reason")),
+    runs.map((r) => h("tr", {}, h("td", { class: "small" }, h("a", { href: `/run/${r.runId}`, onclick: (e) => { e.preventDefault(); go("run", r.runId); } }, r.startedAt)), h("td", {}, r.scenarioId), h("td", { class: "small" }, `${r.agent.label} @ ${r.agent.version}`), h("td", {}, badge(r.verdict)), h("td", { class: "small" }, r.reason))))));
+}
+function viewGate(m) {
+  const b = h("input", { value: "scripted-v1" }); const c = h("input", { value: "scripted-v2" }); const n = h("input", { type: "number", min: 1, value: 1 }); const out = h("div");
+  m.append(h("div", { class: "panel" }, h("p", { class: "muted" }, "Compares saved runs by agent version label. Counts are observed outcomes, not reliability guarantees."),
+    h("div", { class: "row" }, h("div", {}, h("label", {}, "Baseline version"), b), h("div", {}, h("label", {}, "Candidate version"), c), h("div", {}, h("label", {}, "Mandatory runs per scenario"), n)),
+    h("button", { class: "primary", onclick: async () => {
+      try {
+        const g = await call("POST", "/api/gate", { baseline: b.value, candidate: c.value, runsPerScenario: Number(n.value) });
+        const cls = g.decision === "READY TO RELEASE" ? "READY" : g.decision === "BLOCKED" ? "BLOCKED" : "REVIEW";
+        const fc = (x) => ["PASS", "FAIL", "ERROR", "INCONCLUSIVE"].filter((v) => x[v]).map((v) => `${x[v]}/${x.total} ${v}`).join(" · ") || "no runs";
+        out.replaceChildren(h("div", { class: `banner ${cls}` }, `${g.decision} — ${g.reason}`),
+          h("table", {}, h("tr", {}, h("th", {}, "Scenario"), h("th", {}, "Baseline"), h("th", {}, "Candidate"), h("th", {}, "Status"), h("th", {}, "Evidence")),
+            g.rows.map((r) => h("tr", {}, h("td", {}, r.scenarioId), h("td", {}, fc(r.baseline)), h("td", {}, fc(r.candidate)), h("td", {}, badge(r.status.toUpperCase(), r.status === "ok" ? "PASS" : r.status === "blocked" ? "FAIL" : "INCONCLUSIVE"), h("div", { class: "small" }, r.why)),
+              h("td", { class: "small" }, ...r.evidence.map((e) => h("div", {}, `${e.side}: `, h("a", { href: `/run/${e.runId}`, onclick: (ev) => { ev.preventDefault(); go("run", e.runId); } }, e.runId.slice(0, 8)), ` ${e.verdict}`)))))),
+          ...g.disclosures.map((d) => h("p", { class: "small muted" }, d)));
+      } catch (e) { out.replaceChildren(h("p", { class: "err" }, e.message)); }
+    } }, "Compute release gate"), out));
+}
+
+(async () => {
+  try { state.meta = await call("GET", "/api/meta"); } catch (e) { $("#main").append(h("p", { class: "err" }, e.message)); return; }
+  $("#meta").textContent = `Agents API: ${state.meta.agentsApi} · judge: ${state.meta.judge.name}${state.meta.privateUrlsAllowed ? " · LOCAL DEV: private agent URLs allowed" : ""}`;
+  const m = /^\/run\/([0-9a-f-]{36})$/.exec(location.pathname);
+  render(m ? "run" : "connect", m && m[1]);
+  window.addEventListener("popstate", () => { const r = /^\/run\/([0-9a-f-]{36})$/.exec(location.pathname); render(r ? "run" : "connect", r && r[1]); });
+})();
+</script>
+</body>
+</html>

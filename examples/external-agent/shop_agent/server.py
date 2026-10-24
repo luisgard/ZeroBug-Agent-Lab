@@ -11,6 +11,7 @@ Run: python -m shop_agent.server --variant baseline --port 8000
 from __future__ import annotations
 
 import argparse
+import signal
 import json
 import os
 import sys
@@ -133,6 +134,11 @@ def make_handler(variant: str, api_token: str | None):
     return Handler
 
 
+def _graceful_exit(*_):
+    # SIGTERM -> same clean shutdown path as Ctrl+C
+    raise KeyboardInterrupt
+
+
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--variant", default=os.environ.get("AGENT_VARIANT", "baseline"), choices=["baseline", "candidate", "wrong-item"])
@@ -140,6 +146,7 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--port", type=int, default=int(os.environ.get("AGENT_PORT", "8000")))
     a = ap.parse_args(argv)
     srv = ThreadingHTTPServer((a.host, a.port), make_handler(a.variant, os.environ.get("AGENT_API_TOKEN")))
+    signal.signal(signal.SIGTERM, _graceful_exit)
     log("listening", host=a.host, port=srv.server_address[1], variant=a.variant, planner=os.environ.get("AGENT_PLANNER", "scripted"))
     try:
         srv.serve_forever()

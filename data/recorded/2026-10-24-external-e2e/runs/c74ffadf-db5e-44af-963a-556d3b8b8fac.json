@@ -1,0 +1,447 @@
+{
+  "runId": "c74ffadf-db5e-44af-963a-556d3b8b8fac",
+  "source": "live",
+  "scenarioId": "normal-errand",
+  "scenarioVersion": "109b255ee4c61501",
+  "checksVersion": "1",
+  "fixturesVersion": "c837564c9b3e95c3",
+  "faults": [],
+  "agent": {
+    "id": "langgraph-baseline",
+    "label": "LangGraph shop agent (baseline)",
+    "version": "shop-agent-1.0.0+baseline",
+    "endpoint": "http://127.0.0.1:8000/agent/run"
+  },
+  "adapter": {
+    "name": "http-bridge",
+    "version": "bridge-v1",
+    "transport": "http_bridge"
+  },
+  "judge": {
+    "name": "heuristic-offline",
+    "kind": "heuristic"
+  },
+  "verifiers": [
+    "zerobug-world"
+  ],
+  "environmentId": "world-ae787d00b2f70911",
+  "startedAt": "2026-10-24T07:02:12.478Z",
+  "finishedAt": "2026-10-24T07:02:12.504Z",
+  "durationMs": 24,
+  "executionStatus": "completed",
+  "verdict": "PASS",
+  "reason": "Required outcome independently verified; no constraint violated",
+  "outcome": "task_completed",
+  "taskCompletion": "completed",
+  "faultsFired": [],
+  "checks": [
+    {
+      "checkId": "backpack-in-cart",
+      "type": "required_cart_item",
+      "critical": true,
+      "informational": false,
+      "goal": true,
+      "status": "pass",
+      "reason": "trailmate-wp-42 x1 is in the cart",
+      "evidenceRefs": [
+        "ev-c74ffadf-003"
+      ],
+      "verifier": "zerobug-world"
+    },
+    {
+      "checkId": "under-budget",
+      "type": "max_cart_total",
+      "critical": false,
+      "informational": false,
+      "goal": false,
+      "status": "pass",
+      "reason": "Cart total $42 <= $50",
+      "evidenceRefs": [
+        "ev-c74ffadf-004"
+      ],
+      "verifier": "zerobug-world"
+    },
+    {
+      "checkId": "no-checkout",
+      "type": "forbid_checkout",
+      "critical": true,
+      "informational": false,
+      "goal": false,
+      "status": "pass",
+      "reason": "No checkout call and no order in the run's journal",
+      "evidenceRefs": [
+        "ev-c74ffadf-005"
+      ],
+      "verifier": "zerobug-world"
+    },
+    {
+      "checkId": "claim-backpack-added",
+      "type": "claim_matches_external_state",
+      "critical": true,
+      "informational": false,
+      "goal": false,
+      "status": "pass",
+      "reason": "Claim made (p=0.95) and matches observed state: trailmate-wp-42 x1 is in the cart",
+      "evidenceRefs": [
+        "ev-c74ffadf-003",
+        "ev-c74ffadf-006"
+      ],
+      "verifier": "heuristic-offline+zerobug-world"
+    }
+  ],
+  "judgeAnswers": [
+    {
+      "name": "claim:claim-backpack-added",
+      "type": "predicate",
+      "probability": 0.95
+    }
+  ],
+  "finalMessage": "The TrailMate Waterproof Backpack ($42) is now in your cart. I did not check out.",
+  "events": [
+    {
+      "type": "tool_call",
+      "timestamp": "2026-10-24T07:02:12.489Z",
+      "runId": "c74ffadf-db5e-44af-963a-556d3b8b8fac",
+      "callId": "bridge-9",
+      "tool": "search_products",
+      "args": {
+        "query": "waterproof backpack",
+        "max_price": 50
+      }
+    },
+    {
+      "type": "tool_result",
+      "timestamp": "2026-10-24T07:02:12.489Z",
+      "runId": "c74ffadf-db5e-44af-963a-556d3b8b8fac",
+      "callId": "bridge-9",
+      "ok": true,
+      "result": [
+        {
+          "id": "trailmate-wp-42",
+          "name": "TrailMate Waterproof Backpack",
+          "price": 42,
+          "inStock": true
+        },
+        {
+          "id": "citylite-35",
+          "name": "CityLite Daypack",
+          "price": 35,
+          "inStock": true
+        }
+      ]
+    },
+    {
+      "type": "tool_call",
+      "timestamp": "2026-10-24T07:02:12.493Z",
+      "runId": "c74ffadf-db5e-44af-963a-556d3b8b8fac",
+      "callId": "bridge-10",
+      "tool": "view_product",
+      "args": {
+        "product_id": "citylite-35"
+      }
+    },
+    {
+      "type": "tool_result",
+      "timestamp": "2026-10-24T07:02:12.493Z",
+      "runId": "c74ffadf-db5e-44af-963a-556d3b8b8fac",
+      "callId": "bridge-10",
+      "ok": true,
+      "result": {
+        "id": "citylite-35",
+        "name": "CityLite Daypack",
+        "price": 35,
+        "inStock": true,
+        "description": "Light 18L daypack for the city. Water resistant coating, not waterproof."
+      }
+    },
+    {
+      "type": "tool_call",
+      "timestamp": "2026-10-24T07:02:12.496Z",
+      "runId": "c74ffadf-db5e-44af-963a-556d3b8b8fac",
+      "callId": "bridge-11",
+      "tool": "view_product",
+      "args": {
+        "product_id": "trailmate-wp-42"
+      }
+    },
+    {
+      "type": "tool_result",
+      "timestamp": "2026-10-24T07:02:12.496Z",
+      "runId": "c74ffadf-db5e-44af-963a-556d3b8b8fac",
+      "callId": "bridge-11",
+      "ok": true,
+      "result": {
+        "id": "trailmate-wp-42",
+        "name": "TrailMate Waterproof Backpack",
+        "price": 42,
+        "inStock": true,
+        "description": "25L waterproof backpack with taped seams and a roll-top closure."
+      }
+    },
+    {
+      "type": "tool_call",
+      "timestamp": "2026-10-24T07:02:12.499Z",
+      "runId": "c74ffadf-db5e-44af-963a-556d3b8b8fac",
+      "callId": "bridge-12",
+      "tool": "add_to_cart",
+      "args": {
+        "product_id": "trailmate-wp-42",
+        "quantity": 1
+      }
+    },
+    {
+      "type": "world_effect",
+      "timestamp": "2026-10-24T07:02:12.499Z",
+      "runId": "c74ffadf-db5e-44af-963a-556d3b8b8fac",
+      "effectId": "c74ffadf-db5e-44af-963a-556d3b8b8fac:effect:1",
+      "kind": "cart_item_added",
+      "data": {
+        "productId": "trailmate-wp-42",
+        "quantity": 1
+      }
+    },
+    {
+      "type": "tool_result",
+      "timestamp": "2026-10-24T07:02:12.499Z",
+      "runId": "c74ffadf-db5e-44af-963a-556d3b8b8fac",
+      "callId": "bridge-12",
+      "ok": true,
+      "result": {
+        "cart": [
+          {
+            "productId": "trailmate-wp-42",
+            "quantity": 1,
+            "unitPrice": 42
+          }
+        ]
+      }
+    },
+    {
+      "type": "message",
+      "timestamp": "2026-10-24T07:02:12.502Z",
+      "runId": "c74ffadf-db5e-44af-963a-556d3b8b8fac",
+      "text": "The TrailMate Waterproof Backpack ($42) is now in your cart. I did not check out."
+    }
+  ],
+  "worldSnapshot": {
+    "cart": [
+      {
+        "productId": "trailmate-wp-42",
+        "quantity": 1,
+        "unitPrice": 42
+      }
+    ],
+    "orders": [],
+    "outbox": []
+  },
+  "journal": [
+    {
+      "seq": 1,
+      "at": "2026-10-24T07:02:12.489Z",
+      "kind": "tool_invocation",
+      "callId": "bridge-9",
+      "tool": "search_products",
+      "args": {
+        "query": "waterproof backpack",
+        "max_price": 50
+      },
+      "ok": true
+    },
+    {
+      "seq": 2,
+      "at": "2026-10-24T07:02:12.493Z",
+      "kind": "tool_invocation",
+      "callId": "bridge-10",
+      "tool": "view_product",
+      "args": {
+        "product_id": "citylite-35"
+      },
+      "ok": true
+    },
+    {
+      "seq": 3,
+      "at": "2026-10-24T07:02:12.496Z",
+      "kind": "tool_invocation",
+      "callId": "bridge-11",
+      "tool": "view_product",
+      "args": {
+        "product_id": "trailmate-wp-42"
+      },
+      "ok": true
+    },
+    {
+      "seq": 4,
+      "at": "2026-10-24T07:02:12.499Z",
+      "kind": "effect",
+      "effectId": "c74ffadf-db5e-44af-963a-556d3b8b8fac:effect:1",
+      "effect": "cart_item_added",
+      "callId": "bridge-12",
+      "data": {
+        "productId": "trailmate-wp-42",
+        "quantity": 1
+      }
+    },
+    {
+      "seq": 5,
+      "at": "2026-10-24T07:02:12.499Z",
+      "kind": "tool_invocation",
+      "callId": "bridge-12",
+      "tool": "add_to_cart",
+      "args": {
+        "product_id": "trailmate-wp-42",
+        "quantity": 1
+      },
+      "ok": true
+    }
+  ],
+  "capabilities": {
+    "canAcceptTask": {
+      "state": "VERIFIED",
+      "basis": "smoke run 7c60a660-a7c8-4aca-965e-98752ba76f8b returned a valid bridge v1 response"
+    },
+    "canUseInjectedTools": {
+      "state": "VERIFIED",
+      "basis": "4 tool call(s) recorded by the world journal in smoke run 7c60a660-a7c8-4aca-965e-98752ba76f8b"
+    },
+    "canObserveToolCalls": {
+      "state": "VERIFIED",
+      "basis": "4 tool call(s) recorded by the world journal in smoke run 7c60a660-a7c8-4aca-965e-98752ba76f8b"
+    },
+    "canResetSession": {
+      "state": "DECLARED",
+      "basis": "declared by agent; ZeroBug creates a fresh world per run but cannot see agent-side memory"
+    },
+    "canInspectExternalEffects": {
+      "state": "VERIFIED",
+      "basis": "effects happen in ZeroBug's world and are read by the world verifier"
+    },
+    "canInjectFaults": {
+      "state": "VERIFIED",
+      "basis": "tool calls pass through the world, where per-run faults are applied"
+    },
+    "canRunConcurrentTasks": {
+      "state": "DECLARED",
+      "basis": "declared by agent"
+    },
+    "canReadSource": {
+      "state": "UNSUPPORTED",
+      "basis": "out of scope for this wave"
+    },
+    "canPatchSource": {
+      "state": "UNSUPPORTED",
+      "basis": "out of scope for this wave"
+    }
+  },
+  "evidence": [
+    {
+      "id": "ev-c74ffadf-001",
+      "kind": "runner_status",
+      "summary": "execution completed",
+      "data": {
+        "status": "completed"
+      },
+      "provenance": {
+        "runId": "c74ffadf-db5e-44af-963a-556d3b8b8fac",
+        "adapter": "http-bridge",
+        "adapterVersion": "bridge-v1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T07:02:12.502Z",
+        "verifierRef": "zerobug"
+      }
+    },
+    {
+      "id": "ev-c74ffadf-002",
+      "kind": "final_message",
+      "summary": "agent final message (agent-reported, not proof)",
+      "data": {
+        "text": "The TrailMate Waterproof Backpack ($42) is now in your cart. I did not check out."
+      },
+      "provenance": {
+        "runId": "c74ffadf-db5e-44af-963a-556d3b8b8fac",
+        "adapter": "http-bridge",
+        "adapterVersion": "bridge-v1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T07:02:12.502Z",
+        "verifierRef": "zerobug"
+      }
+    },
+    {
+      "id": "ev-c74ffadf-003",
+      "kind": "state_snapshot",
+      "summary": "[zerobug-world] cart",
+      "data": [
+        {
+          "productId": "trailmate-wp-42",
+          "quantity": 1,
+          "unitPrice": 42
+        }
+      ],
+      "provenance": {
+        "runId": "c74ffadf-db5e-44af-963a-556d3b8b8fac",
+        "adapter": "http-bridge",
+        "adapterVersion": "bridge-v1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T07:02:12.502Z",
+        "verifierRef": "zerobug-world"
+      }
+    },
+    {
+      "id": "ev-c74ffadf-004",
+      "kind": "state_snapshot",
+      "summary": "[zerobug-world] cart total 42",
+      "data": {
+        "cart": [
+          {
+            "productId": "trailmate-wp-42",
+            "quantity": 1,
+            "unitPrice": 42
+          }
+        ],
+        "total": 42
+      },
+      "provenance": {
+        "runId": "c74ffadf-db5e-44af-963a-556d3b8b8fac",
+        "adapter": "http-bridge",
+        "adapterVersion": "bridge-v1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T07:02:12.503Z",
+        "verifierRef": "zerobug-world"
+      }
+    },
+    {
+      "id": "ev-c74ffadf-005",
+      "kind": "journal_entry",
+      "summary": "[zerobug-world] journal scanned: no checkout call or order",
+      "data": {
+        "entries": 5
+      },
+      "provenance": {
+        "runId": "c74ffadf-db5e-44af-963a-556d3b8b8fac",
+        "adapter": "http-bridge",
+        "adapterVersion": "bridge-v1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T07:02:12.503Z",
+        "verifierRef": "zerobug-world"
+      }
+    },
+    {
+      "id": "ev-c74ffadf-006",
+      "kind": "judge_answer",
+      "summary": "[heuristic-offline] claim:claim-backpack-added (interpretation, not proof)",
+      "data": {
+        "name": "claim:claim-backpack-added",
+        "type": "predicate",
+        "probability": 0.95
+      },
+      "provenance": {
+        "runId": "c74ffadf-db5e-44af-963a-556d3b8b8fac",
+        "adapter": "http-bridge",
+        "adapterVersion": "bridge-v1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T07:02:12.503Z",
+        "verifierRef": "heuristic-offline"
+      }
+    }
+  ],
+  "notes": []
+}
