@@ -17,7 +17,10 @@ Current status by gate (what is done, partial or blocked, and why): [`WAVE_STATU
 | Sample agents (scripted) | Offline tests and demos | Everything (instrumented) |
 | HTTP bridge | An existing agent you control (LangGraph, Agents SDK, custom…). It calls ZeroBug's run-scoped tool URLs. | Tool calls, cart, orders, emails, secret egress, fault handling |
 | Black-box HTTP | Only a chat URL | The reply. Side effects only through a separately granted read-only verifier; otherwise INCONCLUSIVE |
+| Browser chat (beta) | Only a chat web page | The reply, read in a headless browser. Side effects through connectors |
 | OpenAI Agents API | Agents defined by instructions | Everything (instrumented). **BLOCKED in this build: no API key** |
+
+**Real side effects:** with evidence connectors (Gmail API, order/payment APIs, any MCP connector) ZeroBug checks that the email really arrived or the order really exists, for any of the modes above. Setup and validation status: [`docs/CONNECTORS.md`](docs/CONNECTORS.md). Not yet run against a real inbox (needs a QA Gmail account).
 
 Tested end to end: sample agents and one independently built **LangGraph** agent (bridge and black-box), on localhost. Other frameworks follow the same contract but are untested. See [`docs/UNIVERSAL-CAPABILITIES.md`](docs/UNIVERSAL-CAPABILITIES.md).
 
@@ -53,6 +56,7 @@ Real OpenAI APIs (optional): put `OPENAI_API_KEY` in `.env.local` (never committ
 | --- | --- |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Modules, verdict precedence, degraded outcomes, release gate |
 | [`docs/SCENARIOS.md`](docs/SCENARIOS.md) | Scenario format and check types |
+| [`docs/CONNECTORS.md`](docs/CONNECTORS.md) | Verifying real emails, orders and payments (Gmail, HTTP, MCP) |
 | [`docs/HTTP-BRIDGE-CONTRACT.md`](docs/HTTP-BRIDGE-CONTRACT.md) | Bridge protocol v1 for external agents |
 | [`docs/UNIVERSAL-CAPABILITIES.md`](docs/UNIVERSAL-CAPABILITIES.md) | Audit and honest integration matrix |
 | [`docs/THREAT-MODEL.md`](docs/THREAT-MODEL.md) | Threats, controls and the tests that prove them |

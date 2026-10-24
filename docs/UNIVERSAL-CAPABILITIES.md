@@ -30,7 +30,8 @@ Legend: **TESTED** = a test or recorded run in this repo exercises it end to end
 | Decisions API (`client.decisions.create`, `gpt-6-luna`) | judge | **BLOCKED** — no key | Contract test with fake client (`tests/agents-api.test.ts`) | Claim interpretation only (advisory) |
 | LangGraph agent with a real model planner | `http_bridge` | **BLOCKED** — no key | `shop_agent/llm_planner.py` exists, never executed | — |
 | OpenAI Agents SDK, CrewAI, LlamaIndex, custom Node/Python | `http_bridge` | **PROPOSAL** | Contract in `docs/HTTP-BRIDGE-CONTRACT.md`; no example built | Same as §3 *if* they implement the contract |
-| Browser/UI agents | — | **PROPOSAL (P1)** | UI tab says "not available yet"; no controls | — |
+| Browser/UI chat agents | `blackbox_http` (browser runner) | **TESTED locally** (own test page only) | `tests/browser.test.ts` (real headless Chromium) | Reply; side effects via connectors |
+| Any agent + real inbox / store / payment | connector checks | **BLOCKED** — no QA credentials yet | `tests/connectors.test.ts`, `docs/CONNECTORS.md` | Emails, orders, payments in the real system (read-only) |
 | Voice/realtime agents | — | **Out of scope (P2)** | — | — |
 | Remote/public agent endpoints | `http_bridge` / `blackbox_http` | **NOT TESTED** | Only `127.0.0.1` with explicit address approval was used | SSRF controls are unit-tested, public networking is not |
 

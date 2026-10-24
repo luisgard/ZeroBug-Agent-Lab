@@ -1,0 +1,41 @@
+{
+  "sources": {
+    "qa-inbox": {
+      "kind": "gmail",
+      "clientIdEnv": "ZB_GMAIL_CLIENT_ID",
+      "clientSecretEnv": "ZB_GMAIL_CLIENT_SECRET",
+      "refreshTokenEnv": "ZB_GMAIL_REFRESH_TOKEN"
+    },
+    "payments": {
+      "kind": "http_json",
+      "headersFromEnv": { "Authorization": { "env": "ZB_STRIPE_RESTRICTED_KEY", "prefix": "Bearer " } },
+      "healthUrl": "https://api.stripe.com/v1/balance",
+      "queries": {
+        "payment": {
+          "url": "https://api.stripe.com/v1/payment_intents/search?query=metadata%5B%27zb_ref%27%5D%3A%27{ref}%27",
+          "itemsPath": "data",
+          "fields": { "id": "id", "amount": "amount", "currency": "currency", "status": "status", "ref": "metadata.zb_ref" }
+        }
+      }
+    },
+    "shop": {
+      "kind": "http_json",
+      "headersFromEnv": { "Authorization": { "env": "ZB_SHOP_READ_TOKEN", "prefix": "Bearer " } },
+      "queries": {
+        "order": {
+          "url": "https://staging.vendor.example/api/orders?note={ref}",
+          "itemsPath": "orders",
+          "fields": { "id": "id", "product": "line_items", "quantity": "quantity", "total": "total", "status": "status", "ref": "note" }
+        }
+      }
+    },
+    "outlook-mcp": {
+      "kind": "mcp",
+      "transport": { "type": "http", "url": "https://mcp.vendor.example/mcp", "headersFromEnv": { "Authorization": { "env": "ZB_OUTLOOK_MCP_TOKEN", "prefix": "Bearer " } } },
+      "allowTools": ["search_messages"],
+      "queries": {
+        "email": { "tool": "search_messages", "args": { "query": "{ref}" }, "parse": { "mode": "text" } }
+      }
+    }
+  }
+}

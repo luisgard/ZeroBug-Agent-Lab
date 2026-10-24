@@ -69,7 +69,7 @@ function render(view, arg) { nav(view); const m = $("#main"); m.replaceChildren(
 
 // ---------------------------------------------------------------- connect
 function viewConnect(m) {
-  const tabs = [["samples", "Sample agents"], ["agents_api", "Agents API"], ["http_bridge", "External Agent / HTTP Bridge"], ["blackbox_http", "Black-box HTTP"], ["browser", "Browser agent"]];
+  const tabs = [["samples", "Sample agents"], ["agents_api", "Agents API"], ["http_bridge", "External Agent / HTTP Bridge"], ["blackbox_http", "Black-box HTTP"], ["browser", "Browser chat (beta)"]];
   const t = h("div", { class: "tabs row" }); for (const [k, l] of tabs) t.append(h("button", { class: state.connectTab === k ? "on" : "", onclick: () => { state.connectTab = k; render("connect"); } }, l));
   m.append(h("div", { class: "panel" }, h("div", { class: "muted small" }, "Selected agent: ", h("b", {}, state.agentLabel)), t));
   const p = h("div", { class: "panel" }); m.append(p);
@@ -100,7 +100,13 @@ function viewConnect(m) {
       h("label", {}, "Verifier"), vu, h("label", {}, "Version label"), ver,
       h("button", { class: "primary", onclick: () => smoke({ kind: "blackbox_http", ...spec() }, out, () => select({ kind: "blackbox_http", ...spec(), ...(ver.value ? { version: ver.value, label: `Black-box ${ver.value}` } : {}) }, `Black-box ${ep.value} ${ver.value}`)) }, "Connect & run smoke test"), out);
   }
-  if (state.connectTab === "browser") p.append(h("p", {}, badge("NOT AVAILABLE YET", "UNSUPPORTED"), " Browser/UI agents are a P1 item. No integration has been tested, so there are no controls here."));
+  if (state.connectTab === "browser") {
+    const url = h("input", { placeholder: "https://vendor.example/chat" }); const inp = h("input", { placeholder: "Input selector, e.g. textarea" }); const snd = h("input", { placeholder: "Send button selector (optional; Enter otherwise)" }); const rep = h("input", { placeholder: "Reply bubble selector, e.g. .assistant-message" }); const ver = h("input", { placeholder: "Version label" }); const err = h("div", { class: "err small" });
+    p.append(h("p", {}, badge("BETA", "DECLARED"), " Opens the chat page in a headless browser, types the task and reads the settled reply. Tested only against a local test page so far. Side effects are proven only by connector checks (Gmail, orders, payments)."),
+      h("p", { class: "small muted" }, "Evidence sources configured on the server: ", state.meta.evidenceSources.length ? state.meta.evidenceSources.join(", ") : "none (claims about emails or purchases will be INCONCLUSIVE)"),
+      h("label", {}, "Chat page URL"), url, h("label", {}, "Input selector"), inp, h("label", {}, "Send selector"), snd, h("label", {}, "Reply selector"), rep, h("label", {}, "Version label"), ver,
+      h("button", { class: "primary", onclick: () => { if (!url.value || !inp.value || !rep.value) { err.textContent = "URL, input selector and reply selector are required."; return; } select({ kind: "browser_chat", url: url.value, inputSelector: inp.value, replySelector: rep.value, ...(snd.value ? { sendSelector: snd.value } : {}), ...(ver.value ? { version: ver.value, label: `Browser chat ${ver.value}` } : {}) }, `Browser chat ${url.value} ${ver.value}`); } }, "Use this agent"), err);
+  }
 }
 async function smoke(body, out, onUse) {
   out.replaceChildren(h("p", { class: "muted" }, "Running a real smoke task…"));

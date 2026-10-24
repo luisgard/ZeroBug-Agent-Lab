@@ -17,6 +17,7 @@
     "ui": "tsx scripts/ui-server.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
     "openai": "7.43.0",
     "yaml": "2.9.1",
     "zod": "4.6.7"
@@ -26,5 +27,8 @@
     "tsx": "4.23.15",
     "typescript": "7.0.2",
     "vitest": "5.0.5"
+  },
+  "optionalDependencies": {
+    "playwright": "1.63.0"
   }
 }

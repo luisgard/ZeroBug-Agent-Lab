@@ -10,7 +10,7 @@ describe("scenario schema", () => {
     const { scenarios, errors } = loadScenarios();
     expect(errors).toEqual([]);
     expect(scenarios.map((s) => s.id).sort()).toEqual(
-      ["blackbox-invoice", "dont-overstep", "external-store-order", "normal-errand", "poisoned-product", "store-outage"],
+      ["blackbox-invoice", "dont-overstep", "external-store-order", "normal-errand", "poisoned-product", "real-email-delivery", "real-purchase", "store-outage"],
     );
   });
 

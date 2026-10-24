@@ -24,6 +24,8 @@ import { ScriptedRunner } from "../src/runner/scripted.ts";
 import { loadScenario, loadScenarios } from "../src/scenarios/schema.ts";
 import { fingerprint, newRunId } from "../src/util/ids.ts";
 import { loadLocalEnv } from "../src/util/env.ts";
+import { SourceRegistry } from "../src/connectors/registry.ts";
+import { BrowserChatRunner } from "../src/runner/browser.ts";
 
 loadLocalEnv();
 
@@ -32,6 +34,7 @@ const store = new RunStore();
 const bridge = new BridgeServer({ port: Number(process.env.ZB_BRIDGE_PORT ?? 3000) });
 const live = new Map<string, { events: RunEvent[]; record: RunRecord | null; error: string | null }>();
 const hasKey = Boolean(process.env.OPENAI_API_KEY);
+const evidenceSources = SourceRegistry.load();
 const judge = process.env.ZB_JUDGE === "decisions" && hasKey ? new DecisionsJudge(new OpenAI()) : new HeuristicJudge();
 
 const Mapping = z.strictObject({ taskField: z.string(), responseField: z.string(), correlationField: z.string().optional() });
@@ -39,6 +42,7 @@ const AgentSpec = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("sample"), id: z.enum(Object.keys(SAMPLE_AGENTS) as [SampleAgentId, ...SampleAgentId[]]) }),
   z.strictObject({ kind: z.literal("agents_api"), instructions: z.string().trim().min(1, "Instructions are empty"), model: z.string().optional(), label: z.string().max(80).optional() }),
   z.strictObject({ kind: z.literal("http_bridge"), endpoint: z.string().url(), label: z.string().max(80).optional(), version: z.string().max(80).optional() }),
+  z.strictObject({ kind: z.literal("browser_chat"), url: z.string().url(), inputSelector: z.string().min(1).max(200), sendSelector: z.string().max(200).optional(), replySelector: z.string().min(1).max(200), label: z.string().max(80).optional(), version: z.string().max(80).optional() }),
   z.strictObject({ kind: z.literal("blackbox_http"), endpoint: z.string().url(), mapping: Mapping, verifierUrl: z.string().url().optional(), label: z.string().max(80).optional(), version: z.string().max(80).optional() }),
 ]);
 const StartRuns = z.strictObject({ agent: AgentSpec, scenarioIds: z.array(z.string()).min(1, "Select at least one scenario"), repeats: z.number().int().min(1).max(10).default(1) });
@@ -67,6 +71,11 @@ function build(spec: z.infer<typeof AgentSpec>): { runner: AgentRunner; agent: A
         runner: new HttpBridgeRunner(bridge, { endpoint: spec.endpoint, policy, ...(process.env.ZB_AGENT_TOKEN ? { agentToken: process.env.ZB_AGENT_TOKEN } : {}) }),
         agent: { id: "http-bridge", label: spec.label ?? `Bridge ${spec.endpoint}`, version: spec.version ?? "unversioned", endpoint: spec.endpoint },
       };
+    case "browser_chat":
+      return {
+        runner: new BrowserChatRunner({ url: spec.url, inputSelector: spec.inputSelector, replySelector: spec.replySelector, ...(spec.sendSelector ? { sendSelector: spec.sendSelector } : {}), policy }),
+        agent: { id: "browser-chat", label: spec.label ?? `Browser chat ${spec.url}`, version: spec.version ?? "unversioned", endpoint: spec.url },
+      };
     case "blackbox_http": {
       const readToken = process.env.ZB_VERIFIER_READ_TOKEN;
       if (spec.verifierUrl && !readToken) throw new HttpError(400, "Verifier URL given but ZB_VERIFIER_READ_TOKEN is not configured on the server.");
@@ -92,6 +101,7 @@ async function api(method: string, path: string, body: unknown): Promise<unknown
       judge: judge.info,
       samples: Object.entries(SAMPLE_AGENTS).map(([id, s]) => ({ id, label: s.label })),
       privateUrlsAllowed: policyFromEnv().allowPrivate,
+      evidenceSources: evidenceSources?.names() ?? [],
     };
   }
   if (method === "GET" && path === "/api/scenarios") return loadScenarios().scenarios;
@@ -122,7 +132,7 @@ async function api(method: string, path: string, body: unknown): Promise<unknown
         live.set(runId, entry);
         jobs.push(async () => {
           try {
-            entry.record = await runScenario({ scenario, agent, runner, judge, store, runId, ...(externalOutbox ? { externalOutbox } : {}), onEvent: (e) => entry.events.push(e) });
+            entry.record = await runScenario({ scenario, agent, runner, judge, store, runId, ...(externalOutbox ? { externalOutbox } : {}), ...(evidenceSources ? { sources: evidenceSources } : {}), onEvent: (e) => entry.events.push(e) });
           } catch (err) {
             entry.error = (err as Error).message;
           }

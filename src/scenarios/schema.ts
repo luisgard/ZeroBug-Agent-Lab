@@ -22,6 +22,7 @@ const Common = {
 };
 const Recipient = z.union([z.literal("customer"), z.string().email()]);
 const Phrase = z.string().min(2).max(200);
+const SourceName = z.string().regex(/^[a-z][a-z0-9-]{0,40}$/);
 
 export const CheckSchema = z.discriminatedUnion("type", [
   z.strictObject({ ...Common, type: z.literal("required_cart_item"), productId: z.string().min(1), quantity: z.number().int().min(1).default(1) }),
@@ -58,13 +59,49 @@ export const CheckSchema = z.discriminatedUnion("type", [
     kinds: z.array(z.enum(["world_journal", "final_message", "external_read"])).min(1),
   }),
   z.strictObject({ ...Common, type: z.literal("expect_no_action") }),
+  // ---- connector checks: verified in a real external system through an evidence source
+  z.strictObject({
+    ...Common,
+    type: z.literal("email_received"),
+    source: SourceName,
+    to: Recipient,
+    subjectContains: Phrase.optional(),
+    bodyContains: Phrase.optional(),
+    fromContains: Phrase.optional(),
+    /** The email must carry this run's reference ({ref}), so old or unrelated mail never counts. */
+    requireRef: z.boolean().default(true),
+    /** Delivery is asynchronous: poll the source up to this long before deciding. */
+    waitSeconds: z.number().int().min(0).max(600).default(60),
+  }),
+  z.strictObject({
+    ...Common,
+    type: z.literal("order_exists"),
+    source: SourceName,
+    productContains: Phrase.optional(),
+    quantity: z.number().int().min(1).optional(),
+    maxTotal: z.number().positive().optional(),
+    status: z.string().min(1).max(40).optional(),
+    requireRef: z.boolean().default(true),
+    waitSeconds: z.number().int().min(0).max(600).default(30),
+  }),
+  z.strictObject({
+    ...Common,
+    type: z.literal("payment_exists"),
+    source: SourceName,
+    amount: z.number().nonnegative().optional(),
+    currency: z.string().regex(/^[A-Za-z]{3}$/).optional(),
+    status: z.string().min(1).max(40).optional(),
+    requireRef: z.boolean().default(true),
+    waitSeconds: z.number().int().min(0).max(600).default(30),
+  }),
 ]);
 export type CheckInput = z.input<typeof CheckSchema>;
 export type Check = z.output<typeof CheckSchema> & { id: string };
 export type CheckType = Check["type"];
 
 /** Check types that establish a positive goal (task outcome) on their own. */
-export const GOAL_CHECK_TYPES: CheckType[] = ["required_cart_item", "required_email_sent", "expect_no_action"];
+export const GOAL_CHECK_TYPES: CheckType[] = ["required_cart_item", "required_email_sent", "expect_no_action", "email_received", "order_exists", "payment_exists"];
+export const CONNECTOR_CHECK_TYPES: CheckType[] = ["email_received", "order_exists", "payment_exists"];
 
 const ScenarioBase = z.strictObject({
   schemaVersion: z.literal(1),
@@ -150,6 +187,10 @@ export function validateScenario(raw: unknown, file: string): Scenario {
     fail("scenario declares only negative constraints; add a positive goal check (or expect_no_action for a valid non-action goal)");
   }
   if (s.degradedOutcome && s.faults.length === 0) fail("degradedOutcome requires at least one injected fault");
+  const needsRef = checks.filter((c) => CONNECTOR_CHECK_TYPES.includes(c.type) && (c as { requireRef?: boolean }).requireRef);
+  if (needsRef.length && !s.task.includes("{ref}")) {
+    fail(`checks ${needsRef.map((c) => c.id).join(", ")} require the run reference: put {ref} in the task so the agent can include it`);
+  }
 
   const { goals: _g, ...rest } = s;
   const body = { ...rest, checks, goals };

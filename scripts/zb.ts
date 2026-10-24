@@ -8,6 +8,9 @@
  *   npm run zb -- run --agent blackbox --endpoint http://127.0.0.1:8000/chat --scenario blackbox-invoice \
  *        --task-field message --response-field reply --correlation-field conversation_id [--verifier-url URL]
  *   npm run zb -- run --agent agents-api --instructions "You are..." --scenario normal-errand   (needs OPENAI_API_KEY)
+ *   npm run zb -- run --agent browser --endpoint https://vendor.example/chat --input-selector "#msg" \
+ *        --send-selector "#send" --reply-selector ".bot" --scenario real-email-delivery
+ *   npm run zb -- sources                 (proves read access to each evidence source in zerobug.sources.json)
  *   npm run zb -- connect --agent bridge --endpoint http://127.0.0.1:8000/agent/run
  *   npm run zb -- gate --baseline scripted-v1 --candidate scripted-v2 [--dir data/runs]
  */
@@ -28,6 +31,8 @@ import { ScriptedRunner } from "../src/runner/scripted.ts";
 import { loadScenario, loadScenarios } from "../src/scenarios/schema.ts";
 import { fingerprint } from "../src/util/ids.ts";
 import { loadLocalEnv } from "../src/util/env.ts";
+import { SourceRegistry } from "../src/connectors/registry.ts";
+import { BrowserChatRunner } from "../src/runner/browser.ts";
 
 loadLocalEnv();
 
@@ -46,6 +51,9 @@ const { positionals, values: a } = parseArgs({
     "response-field": { type: "string", default: "reply" },
     "correlation-field": { type: "string" },
     "verifier-url": { type: "string" },
+    "input-selector": { type: "string" },
+    "send-selector": { type: "string" },
+    "reply-selector": { type: "string" },
     baseline: { type: "string" },
     candidate: { type: "string" },
     dir: { type: "string" },
@@ -65,9 +73,10 @@ async function main() {
     return errors.length ? 1 : 0;
   }
   if (cmd === "gate") return gate();
+  if (cmd === "sources") return sources();
   if (cmd === "connect") return connect();
   if (cmd === "run") return run();
-  console.log("Usage: zb scenarios | run | connect | gate   (see header of scripts/zb.ts)");
+  console.log("Usage: zb scenarios | run | connect | gate | sources   (see header of scripts/zb.ts)");
   return 2;
 }
 
@@ -91,6 +100,10 @@ async function run(): Promise<number> {
     const model = a.model ?? AGENTS_MODEL_DEFAULT;
     runner = new AgentsApiRunner(new OpenAI(), { model, instructions: a.instructions });
     agent = { id: "agents-api", label: a.label ?? `Agents API (${model})`, version: a.version ?? `prompt-${fingerprint({ model, i: a.instructions })}` };
+  } else if (a.agent === "browser") {
+    if (!a.endpoint || !a["input-selector"] || !a["reply-selector"]) throw new Error("--endpoint, --input-selector and --reply-selector are required");
+    runner = new BrowserChatRunner({ url: a.endpoint, inputSelector: a["input-selector"], replySelector: a["reply-selector"], ...(a["send-selector"] ? { sendSelector: a["send-selector"] } : {}), policy: policyFromEnv() });
+    agent = { id: "browser", label: a.label ?? `Browser chat ${a.endpoint}`, version: a.version ?? "unversioned", endpoint: a.endpoint };
   } else if (a.agent === "bridge" || a.agent === "blackbox") {
     if (!a.endpoint) throw new Error("--endpoint is required");
     const policy = policyFromEnv();
@@ -115,6 +128,7 @@ async function run(): Promise<number> {
     }
   } else throw new Error(`Unknown agent: ${a.agent}`);
 
+  const evidenceSources = SourceRegistry.load();
   let worst = 0;
   try {
     for (const id of ids) {
@@ -122,7 +136,7 @@ async function run(): Promise<number> {
       const n = Number(a.runs ?? 1);
       const recs: RunRecord[] = [];
       for (let i = 0; i < n; i++) {
-        const rec = await runScenario({ scenario, agent, runner, judge, store, ...(externalOutbox ? { externalOutbox } : {}) });
+        const rec = await runScenario({ scenario, agent, runner, judge, store, ...(externalOutbox ? { externalOutbox } : {}), ...(evidenceSources ? { sources: evidenceSources } : {}) });
         recs.push(rec);
         print(rec);
         if (rec.verdict !== "PASS") worst = 1;
@@ -135,6 +149,7 @@ async function run(): Promise<number> {
     }
   } finally {
     await bridge?.stop();
+    await evidenceSources?.closeAll();
   }
   return worst;
 }
@@ -161,6 +176,29 @@ function print(r: RunRecord) {
   }
   for (const n of r.notes) console.log(`  note: ${n}`);
   console.log(`\nsaved: ${new RunStore().writeDir}/${r.runId}.json`);
+}
+
+/** Lists configured evidence sources and proves read access with a real authenticated call. */
+async function sources(): Promise<number> {
+  const reg = SourceRegistry.load();
+  if (!reg) {
+    console.log("No zerobug.sources.json found (or ZB_SOURCES_FILE). See zerobug.sources.example.json.");
+    return 1;
+  }
+  let ok = true;
+  for (const name of reg.names()) {
+    try {
+      const s = reg.get(name);
+      const h = await s.health();
+      ok &&= h.ok;
+      console.log(`  ${h.ok ? "VERIFIED   " : "UNAVAILABLE"} ${name.padEnd(16)} ${s.kind.padEnd(10)} provides ${s.provides.join(", ").padEnd(16)} ${h.detail}`);
+    } catch (err) {
+      ok = false;
+      console.log(`  UNAVAILABLE ${name.padEnd(16)} ${(err as Error).message}`);
+    }
+  }
+  await reg.closeAll();
+  return ok ? 0 : 1;
 }
 
 async function connect(): Promise<number> {

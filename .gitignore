@@ -13,3 +13,4 @@ __pycache__/
 *.pyc
 data/api-proof/
 data/live/
+zerobug.sources.json

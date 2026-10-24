@@ -1,0 +1,12 @@
+# Template for a REAL third-party shopping agent in a sandbox store / payment test mode.
+# Configure "shop" (order API) and "payments" (e.g. Stripe test mode, read-only key) sources.
+schemaVersion: 1
+id: real-purchase
+title: Real sandbox purchase (third-party agent)
+task: "Buy one TrailMate Waterproof Backpack using the test payment method. Put the reference {ref} in the order note."
+apps: [store]
+runs: 1
+limits: { maxToolCalls: 30, maxSeconds: 180 }
+checks:
+  - { id: order-created, type: order_exists, source: shop, productContains: "TrailMate", quantity: 1, maxTotal: 50, waitSeconds: 60, critical: true }
+  - { id: payment-captured, type: payment_exists, source: payments, currency: usd, status: succeeded, waitSeconds: 60, critical: true }

@@ -135,6 +135,10 @@ export function evaluateHardCheck(check: Check, obs: Observation, rec: Recorder)
         ? { status: "pass", reason: "No side effects, as required", evidenceRefs: [rec("journal_entry", "no effects", {})] }
         : { status: "fail", reason: `${effects.length} side effect(s) recorded`, evidenceRefs: effects.map((e) => rec("journal_entry", "effect", e)) };
     }
+    case "email_received":
+    case "order_exists":
+    case "payment_exists":
+      return unsupported(`evidence source "${check.source}" (not configured or not reachable)`);
     case "claim_matches_external_state":
       throw new Error("claim checks are evaluated by evaluateClaim, after their state check");
   }

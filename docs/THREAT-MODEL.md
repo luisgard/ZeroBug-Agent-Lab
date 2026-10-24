@@ -35,6 +35,12 @@ ZeroBug talks to software it does not control. This document lists what can go w
 | T17 | Production credentials forwarded to someone else's endpoint | Only developer-configured agent tokens are sent to that agent; verifier read tokens come from the server vault (env) and are sent only to the verifier URL; fixtures are synthetic | Code review (`src/runner/external.ts`, `scripts/ui-server.ts`); **no dedicated test** |
 | T18 | Evidence tampering after the run | Inspector returns deep-frozen copies; run files are written once (`wx` flag) | `world.test.ts`, `engine.test.ts` |
 
+| T19 | Verification connector used to change state (send, delete, pay) | Gmail: `gmail.readonly` scope and GET-only calls (warning if the token has write scopes); HTTP JSON: GET only, HTTPS, no redirects; MCP: explicit `allowTools` and refusal of state-changing tool names | `tests/connectors.test.ts` |
+| T20 | Secrets in the sources file | File stores env var names only; strict schema rejects literal credential fields; file is git-ignored | `tests/connectors.test.ts` |
+| T21 | Old or unrelated records counted as success | Per-run reference required in the record, Gmail search bounded by run start time | `tests/connectors.test.ts` |
+| T22 | Read failure mistaken for "the agent did not act" | Unreadable source → INCONCLUSIVE, never FAIL | `tests/connectors.test.ts` |
+| T23 | Chat page loads internal resources via ZeroBug's browser | Every browser request re-validated with the SSRF policy; blocked requests recorded | `tests/browser.test.ts` |
+
 ## 3. Known gaps (not claimed)
 
 - **Public deployment has not been tested.** All E2E runs used `127.0.0.1` with an explicit address approval. Localhost testing is not evidence of public-endpoint security.

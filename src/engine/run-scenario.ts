@@ -27,6 +27,8 @@ import {
 import { describeFault } from "../world/faults.ts";
 import { type JournalEntry, type WorldSnapshot, createWorld, fixturesFingerprint, loadFixtures, toolsFor } from "../world/world.ts";
 import { EvidenceLog } from "./evidence.ts";
+import { ConnectorVerifier } from "../connectors/verifier.ts";
+import type { SourceRegistry } from "../connectors/registry.ts";
 import type { RunStore } from "./store.ts";
 
 export type AgentDescriptor = {
@@ -39,6 +41,8 @@ export type AgentDescriptor = {
 
 export type RunRecord = {
   runId: string;
+  /** Reference given to the agent ({ref} in the task) so external records can be tied to this run. */
+  ref: string;
   source: "live";
   scenarioId: string;
   scenarioVersion: string;
@@ -82,8 +86,15 @@ export type RunScenarioOptions = {
   capabilities?: CapabilityMatrix;
   /** Black-box only: separately granted read-only verification interface. */
   externalOutbox?: ExternalOutboxConfig;
+  /** Real external systems (Gmail, store/payment APIs, MCP connectors) read by connector checks. */
+  sources?: SourceRegistry;
+  /** Test hook for connector polling interval. */
+  connectorPollMs?: number;
   onEvent?: (e: RunEvent) => void;
 };
+
+/** Short, human-typable reference for a run, e.g. ZB-1A2B3C4D. */
+export const runRef = (runId: string): string => `ZB-${runId.replace(/-/g, "").slice(0, 8).toUpperCase()}`;
 
 export async function runScenario(o: RunScenarioOptions): Promise<RunRecord> {
   const { scenario, runner, judge } = o;
@@ -96,6 +107,8 @@ export async function runScenario(o: RunScenarioOptions): Promise<RunRecord> {
     o.onEvent?.(e);
   };
   const notes: string[] = [];
+  const ref = runRef(runId);
+  const task = scenario.task.replaceAll("{ref}", ref);
   const fixtures = loadFixtures();
   const world = createWorld({ runId, faults: scenario.faults, fixtures, onEffect: emit });
   const instrumented = runner.info.transport !== "blackbox_http";
@@ -124,7 +137,7 @@ export async function runScenario(o: RunScenarioOptions): Promise<RunRecord> {
     result = await runner.run(
       {
         runId,
-        task: scenario.task,
+        task,
         tools: instrumented ? toolsFor(scenario.apps) : [],
         callTool: (name, args, meta) => world.tools.call(name, args, meta),
         limits: scenario.limits,
@@ -138,9 +151,13 @@ export async function runScenario(o: RunScenarioOptions): Promise<RunRecord> {
   if (result.finalMessage) ev.add("final_message", "agent final message (agent-reported, not proof)", { text: result.finalMessage });
 
   // ---- verify (world access != verification access: the agent never had these verifiers)
+  const connectors: VerifierAdapter[] = o.sources
+    ? [new ConnectorVerifier(ev.add, o.sources, { ref, since: new Date(startedAt), customerEmail: fixtures.customer.email, ...(o.connectorPollMs ? { pollMs: o.connectorPollMs } : {}) })]
+    : [];
   const verifiers: VerifierAdapter[] = instrumented
-    ? [new WorldVerifier(ev.add, world.inspector, facts)]
+    ? [...connectors, new WorldVerifier(ev.add, world.inspector, facts)]
     : [
+        ...connectors,
         ...(o.externalOutbox ? [new ExternalOutboxVerifier(ev.add, o.externalOutbox, facts)] : []),
         new MessageOnlyVerifier(ev.add, facts),
       ];
@@ -165,7 +182,7 @@ export async function runScenario(o: RunScenarioOptions): Promise<RunRecord> {
   const needsJudge = scenario.checks.some((c) => c.type === "claim_matches_external_state") || scenario.judge.length > 0;
   if (needsJudge && result.status !== "infrastructure_error" && result.status !== "cancelled") {
     try {
-      answers = await judge.ask(formatEvidence({ task: scenario.task, events, finalMessage: result.finalMessage }), questions, scenario);
+      answers = await judge.ask(formatEvidence({ task, events, finalMessage: result.finalMessage }), questions, scenario);
       for (const a of answers) ev.add("judge_answer", `[${judge.info.name}] ${a.name} (interpretation, not proof)`, a);
     } catch (err) {
       if (!(err instanceof JudgeUnavailableError)) throw err;
@@ -193,6 +210,7 @@ export async function runScenario(o: RunScenarioOptions): Promise<RunRecord> {
   const snap = world.inspector.snapshot();
   const record: RunRecord = {
     runId,
+    ref,
     source: "live",
     scenarioId: scenario.id,
     scenarioVersion: scenario.version,
