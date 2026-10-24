@@ -250,8 +250,14 @@ async function api(method: string, path: string, body: unknown): Promise<unknown
         });
       }
     }
+    // Runs are independent (each has its own reference), so a few go at once; waiting checks
+    // (e.g. "no duplicate arrives in 90 s") would otherwise add up run after run.
+    const parallel = Math.max(1, Math.min(10, Number(process.env.ZB_PARALLEL_RUNS ?? 5) || 5));
     void (async () => {
-      for (const j of jobs) await j();
+      let next = 0;
+      await Promise.all(Array.from({ length: Math.min(parallel, jobs.length) }, async () => {
+        while (next < jobs.length) await jobs[next++]!();
+      }));
       await sources.closeAll();
     })();
     return { runIds, planner: plan.planner };

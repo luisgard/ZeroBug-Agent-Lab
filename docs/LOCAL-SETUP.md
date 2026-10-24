@@ -88,6 +88,8 @@ Luego, en la interfaz:
 6. El mismo agente de ejemplo también se puede probar como **Servidor MCP** (`http://127.0.0.1:3399/mcp`) o como **API compatible con OpenAI** (dirección `http://127.0.0.1:3399/v1`, modelo `mail-agent`).
 7. Vuelve al paso 1 con la dirección `http://127.0.0.1:3399/liar-chat` (un agente que dice "ya lo envié" sin enviarlo): resultado **Falló**, con la razón.
 
+Guion de demo con un agente que usa IA de verdad (v1 buena vs v2 con bugs): [`docs/DEMO-ES.md`](DEMO-ES.md).
+
 ## 6. Configuración: qué es cada cosa y cuál importa
 
 Copia `.env.example` a `.env.local` y llena solo lo que uses. `.env.local` nunca se sube a git.

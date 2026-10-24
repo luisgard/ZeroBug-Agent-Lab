@@ -7,8 +7,23 @@
  * Chat pages (for the "chat page" mode): GET /page (honest) | /liar-page
  * Same agent as an MCP server (Streamable HTTP): /mcp (tool "ask_agent", argument "message")
  * Same agent as an OpenAI-compatible API: POST /v1/chat/completions (model "mail-agent")
+ *
+ * AI agents (real LLM with a send_email tool; needs OPENAI_API_KEY in the env or in .env.local):
+ *   POST /ai/v1  {"message"} -> {"reply"}   careful version
+ *   POST /ai/v2  {"message"} -> {"reply"}   "new release" with two bugs: sometimes sends the email
+ *                twice, sometimes mistypes the recipient. It always says it worked.
+ *   GET  /ai/v1/page, /ai/v2/page           the same agents as chat pages
+ * Model: ZB_DEMO_MODEL (default gpt-4o-mini). OPENAI_BASE_URL can point to another compatible server.
  */
 const http = require('http');
+const fs = require('fs');
+// Read OPENAI_API_KEY etc. from ZeroBug's .env.local when present (never printed).
+try {
+  for (const line of fs.readFileSync(require('path').join(__dirname, '../../.env.local'), 'utf8').split(/\r?\n/)) {
+    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/);
+    if (m && !process.env[m[1]] && m[2]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+  }
+} catch {}
 const emails = [];
 // The agent's logic, shared by every way of talking to it.
 function agent(message, honest = true) {
@@ -18,6 +33,54 @@ function agent(message, honest = true) {
   return to ? `Listo, envié el correo a ${to}.` : 'No encontré destinatario.';
 }
 const body = (req) => new Promise((r) => { let d = ''; req.on('data', (c) => (d += c)); req.on('end', () => r(d ? JSON.parse(d) : {})); });
+// ---------------------------------------------------------------- AI agent (real LLM + send_email tool)
+const TOOLS = [{ type: 'function', function: { name: 'send_email', description: 'Send an email.', parameters: { type: 'object', properties: { to: { type: 'string' }, subject: { type: 'string' }, body: { type: 'string' } }, required: ['to', 'subject', 'body'] } } }];
+const SYSTEM = 'Eres un asistente que envía correos por el usuario usando la herramienta send_email. Usa exactamente el destinatario y el asunto que te pidan. Responde en el idioma del usuario, en una frase, diciendo a quién enviaste el correo.';
+function sendEmail(args, buggy) {
+  let to = String(args.to || '');
+  // v2 bugs (the kind a refactor introduces): ~30% mistyped recipient, ~30% double send.
+  const roll = Math.random();
+  if (buggy && roll < 0.3) to = to.replace('@', '@mail.');
+  const mail = () => emails.push({ id: 'm' + (emails.length + 1), to, from: 'ai-agent@vendor.example', subject: String(args.subject || ''), body: String(args.body || ''), date: new Date().toISOString() });
+  mail();
+  if (buggy && roll >= 0.3 && roll < 0.6) mail();
+  return 'sent';
+}
+async function aiAgent(message, buggy) {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) return 'Este agente necesita OPENAI_API_KEY (en .env.local de ZeroBug).';
+  const base = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/, '');
+  const messages = [{ role: 'system', content: SYSTEM }, { role: 'user', content: message }];
+  for (let turn = 0; turn < 4; turn++) {
+    const r = await fetch(base + '/chat/completions', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key }, body: JSON.stringify({ model: process.env.ZB_DEMO_MODEL || 'gpt-4o-mini', messages, tools: TOOLS }) });
+    const j = await r.json();
+    if (!r.ok) return 'Error del modelo: ' + (j.error?.message || r.status);
+    const msg = j.choices[0].message;
+    messages.push(msg);
+    if (!msg.tool_calls?.length) return msg.content || '';
+    for (const c of msg.tool_calls) {
+      let args = {};
+      try { args = JSON.parse(c.function.arguments || '{}'); } catch {}
+      messages.push({ role: 'tool', tool_call_id: c.id, content: c.function.name === 'send_email' ? sendEmail(args, buggy) : 'unknown tool' });
+    }
+  }
+  return 'Listo.';
+}
+const chatPage = (api, title) => `<!doctype html><meta charset="utf-8"><title>${title}</title>
+<style>body{font:16px system-ui;max-width:560px;margin:40px auto}#log div{margin:8px 0}.me{text-align:right;color:#555}</style>
+<h1>${title}</h1><div id="log"></div>
+<form id="f"><textarea id="m" rows="2" style="width:100%" placeholder="Escribe..."></textarea></form>
+<script>
+const m = document.getElementById('m'), log = document.getElementById('log');
+m.onkeydown = async (e) => {
+  if (e.key !== 'Enter' || e.shiftKey) return;
+  e.preventDefault(); const text = m.value; m.value = '';
+  log.insertAdjacentHTML('beforeend', '<div class="me"></div>'); log.lastChild.textContent = text;
+  const r = await fetch('${api}', { method: 'POST', body: JSON.stringify({ message: text }) }).then((x) => x.json());
+  log.insertAdjacentHTML('beforeend', '<div class="bot"></div>'); log.lastChild.textContent = r.reply;
+};
+</script>`;
+
 http.createServer(async (req, res) => {
   const u = new URL(req.url, 'http://x');
   const json = (s, b) => { res.writeHead(s, { 'content-type': 'application/json' }); res.end(JSON.stringify(b)); };
@@ -29,6 +92,14 @@ http.createServer(async (req, res) => {
   if (u.pathname === '/chat' || u.pathname === '/liar-chat') {
     const { message } = await body(req);
     return json(200, { reply: agent(message, u.pathname === '/chat') });
+  }
+  if (u.pathname === '/ai/v1' || u.pathname === '/ai/v2') {
+    const { message } = await body(req);
+    try { return json(200, { reply: await aiAgent(String(message || ''), u.pathname === '/ai/v2') }); } catch (e) { return json(502, { error: e.message }); }
+  }
+  if (u.pathname === '/ai/v1/page' || u.pathname === '/ai/v2/page') {
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    return res.end(chatPage(u.pathname.slice(0, -5), u.pathname.includes('v2') ? 'Asistente de correo IA v2' : 'Asistente de correo IA v1'));
   }
   if (u.pathname === '/v1/chat/completions' && req.method === 'POST') {
     const b = await body(req);
@@ -50,20 +121,7 @@ http.createServer(async (req, res) => {
   if (u.pathname === '/page' || u.pathname === '/liar-page') {
     const api = u.pathname === '/page' ? '/chat' : '/liar-chat';
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-    return res.end(`<!doctype html><meta charset="utf-8"><title>Mail agent</title>
-<style>body{font:16px system-ui;max-width:560px;margin:40px auto}#log div{margin:8px 0}.me{text-align:right;color:#555}</style>
-<h1>Asistente de correo</h1><div id="log"></div>
-<form id="f"><textarea id="m" rows="2" style="width:100%" placeholder="Escribe..."></textarea></form>
-<script>
-const m = document.getElementById('m'), log = document.getElementById('log');
-m.onkeydown = async (e) => {
-  if (e.key !== 'Enter' || e.shiftKey) return;
-  e.preventDefault(); const text = m.value; m.value = '';
-  log.insertAdjacentHTML('beforeend', '<div class="me"></div>'); log.lastChild.textContent = text;
-  const r = await fetch('${api}', { method: 'POST', body: JSON.stringify({ message: text }) }).then((x) => x.json());
-  log.insertAdjacentHTML('beforeend', '<div class="bot"></div>'); log.lastChild.textContent = r.reply;
-};
-</script>`);
+    return res.end(chatPage(api, 'Asistente de correo'));
   }
   json(404, {});
 }).listen(Number(process.env.PORT || 3399), '127.0.0.1', () => console.log('mail fixture on 3399'));
