@@ -212,6 +212,10 @@ const T = {
     ck_claim_ok: "Lo que dijo tu agente es cierto", ck_claim_bad: "Tu agente dijo algo que no pasó", ck_claim_na: "No pudimos confirmar lo que dijo tu agente",
     r_said: "Lo que dijo tu agente", r_proved: "Lo que comprobamos", r_nomsg: "(no respondió nada)", r_evidence: "Ver evidencia técnica",
     dj_title: "La API de Decisions de OpenAI leyó lo que dijo tu agente", dj_hint: "Es la interpretación de un modelo; el veredicto lo deciden los datos reales de tus sistemas.",
+    dj_how: "Cómo leer esto: ZeroBug le pregunta a la API de Decisions de OpenAI qué afirmó tu agente, revisa tus sistemas reales, y solo los datos reales deciden el resultado. Una afirmación importa cuando los datos reales la contradicen.",
+    dj_q: "Le preguntamos", dj_a: "La API de Decisions respondió", dj_data: "Los datos reales muestran", dj_so: "Conclusión", dj_ans_yes: "Sí, lo dijo", dj_ans_no: "No, no lo dijo", dj_ans_unsure: "No está segura", dj_likely: "de probabilidad", dj_nodata: "Esta pregunta no está ligada a una revisión de datos reales.",
+    dj_so_false: "Tu agente lo afirmó, pero los datos reales dicen otra cosa: es una afirmación falsa.", dj_so_true: "Tu agente lo afirmó y los datos reales lo confirman.", dj_so_none: "Tu agente no afirmó esto, así que no hay nada que contradecir. Por sí solo no prueba que la tarea se hizo; eso lo deciden las revisiones de arriba.", dj_so_unsure: "El modelo no estuvo seguro de lo que afirmó tu agente, así que ZeroBug lo marca para revisión en vez de adivinar.",
+    dj_ft: "Tipo de falla", dj_conf: "de confianza", fl_lied: "dijo que lo logró cuando no fue así, o contó mal lo que pasó", fl_hidden: "siguió instrucciones escondidas en un mensaje o en los datos", fl_over: "hizo algo que no le pidieron o no tenía permitido", fl_gaveup: "se rindió sin terminar", fl_other: "otro tipo de falla", ck_claim_none: "Tu agente no hizo esta afirmación",
     dj_claim: "¿Tu agente dijo que lo hizo?", dj_label: "Tipo de falla", dj_score: "Calificación", dj_refused: "El modelo no quiso responder esta pregunta", dj_none: "Esta prueba no necesitó leer lo que dijo tu agente.", dj_off: "Lo que dijo tu agente se leyó con reglas fijas (sin clave de OpenAI).",
     r_again: "Correr otra vez", r_new: "Probar otra cosa", r_close: "Cerrar", r_run_of: "Corrida", r_open: "Ver detalle",
     c_title: "Conexiones", c_lead: "Las apps donde tu agente deja huella. ZeroBug solo las lee: nunca envía, compra ni borra nada.",
@@ -267,6 +271,10 @@ const T = {
     ck_claim_ok: "What your agent said is true", ck_claim_bad: "Your agent said something that didn't happen", ck_claim_na: "We couldn't confirm what your agent said",
     r_said: "What your agent said", r_proved: "What we verified", r_nomsg: "(no reply)", r_evidence: "See technical evidence",
     dj_title: "OpenAI Decisions API read what your agent said", dj_hint: "A model's interpretation; the verdict is decided by the real data in your systems.",
+    dj_how: "How to read this: ZeroBug asks OpenAI's Decisions API what your agent claimed, checks your real systems, and only the real data decides the verdict. A claim matters when the real data contradicts it.",
+    dj_q: "We asked", dj_a: "Decisions API answered", dj_data: "Real data shows", dj_so: "So", dj_ans_yes: "Yes, it said that", dj_ans_no: "No, it didn't say that", dj_ans_unsure: "Unsure", dj_likely: "likely", dj_nodata: "No real-data check is linked to this question.",
+    dj_so_false: "Your agent claimed this, but the real data says otherwise: a false claim.", dj_so_true: "Your agent claimed this and the real data agrees.", dj_so_none: "Your agent didn't make this claim, so there is nothing to contradict. On its own this doesn't prove the task was done; the checks above decide that.", dj_so_unsure: "The model wasn't sure what your agent claimed, so ZeroBug marks it for review instead of guessing.",
+    dj_ft: "Failure type", dj_conf: "confident", fl_lied: "said it succeeded when it didn't, or misreported what happened", fl_hidden: "followed instructions hidden in a message or in data", fl_over: "did something it wasn't asked or allowed to do", fl_gaveup: "gave up without finishing", fl_other: "another kind of failure", ck_claim_none: "Your agent didn't make this claim",
     dj_claim: "Did your agent say it did it?", dj_label: "Failure type", dj_score: "Rating", dj_refused: "The model declined to answer this question", dj_none: "This test did not need to read what your agent said.", dj_off: "What your agent said was read with fixed rules (no OpenAI key).",
     r_again: "Run again", r_new: "Test something else", r_close: "Close", r_run_of: "Run", r_open: "Open details",
     c_title: "Connections", c_lead: "The apps where your agent leaves a trace. ZeroBug only reads them: it never sends, buys or deletes anything.",
@@ -693,7 +701,8 @@ function paintDetail(box, d) {
     const def = (r.checks || []).find((x) => x.checkId === c.checkId);
     const m = c.status === "pass" ? h("span", { class: "mark ok" }, "✓") : c.status === "fail" ? h("span", { class: "mark bad" }, "✕") : h("span", { class: "mark info" }, "?");
     const name = ({ email_received: "ck_email", order_exists: "ck_order", payment_exists: "ck_payment", payment_absent: "ck_nopay", claim_matches_external_state: "ck_claim" })[c.type];
-    return h("li", {}, m, h("div", {}, h("div", {}, name ? t(name + "_" + (c.status === "pass" ? "ok" : c.status === "fail" ? "bad" : "na")) : c.checkId), h("div", { class: "muted small" }, c.reason)));
+    const noClaim = c.type === "claim_matches_external_state" && c.status === "pass" && /^Claim not made/.test(c.reason || "");
+    return h("li", {}, m, h("div", {}, h("div", {}, noClaim ? t("ck_claim_none") : name ? t(name + "_" + (c.status === "pass" ? "ok" : c.status === "fail" ? "bad" : "na")) : c.checkId), h("div", { class: "muted small" }, c.reason)));
   };
   box.replaceChildren(back,
     h("div", { class: "notice " + cls, style: "font-size:18px" }, h("b", {}, t("v_" + r.verdict)), " — ", t("why_" + r.verdict)), h("p", { class: "muted small" }, r.reason),
@@ -705,27 +714,42 @@ function paintDetail(box, d) {
     h("details", {}, h("summary", {}, t("r_evidence")), ...r.checks.flatMap((c) => c.evidenceRefs.map((id) => h("div", {}, h("div", { class: "small" }, ev[id]?.summary || id), h("pre", {}, JSON.stringify(ev[id]?.data ?? {}, null, 1)))))));
 }
 
-// What the Decisions API answered for this run. Advisory: the verdict comes from the checks above.
+// Explains the Decisions API's part in this run, question by question: what it was asked, what it
+// answered, what the real data shows, and the conclusion. Advisory: the verdict comes from the real data.
+const FAILURE_MEANING = { lied_about_success: "fl_lied", followed_hidden_instruction: "fl_hidden", overstepped: "fl_over", gave_up: "fl_gaveup", other: "fl_other" };
 function judgeCard(r) {
   if (r.judge?.kind !== "decisions_api") return h("p", { class: "muted small" }, t("dj_off"));
   const answers = (r.judgeAnswers || []).filter((a) => !(a.name === "failure_type" && r.verdict !== "FAIL"));
   if (!answers.length) return h("p", { class: "muted small" }, t("dj_none"));
+  const questions = r.judgeQuestions || [];
   const pct = (x) => Math.round(x * 100) + "%";
-  const bar = (x) => h("div", { style: "height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden;margin:4px 0" }, h("div", { style: `height:100%;width:${pct(x)};background:#4f46e5` }));
-  const row = (a) => {
-    if (a.type === "predicate") {
-      const ck = (r.checks || []).find((c) => "claim:" + c.checkId === a.name);
-      const outcome = ck ? t("ck_claim_" + (ck.status === "pass" ? "ok" : ck.status === "fail" ? "bad" : "na")) : a.name;
-      return h("li", {}, h("div", { style: "flex:1" }, h("div", {}, t("dj_claim"), " ", h("b", {}, pct(a.probability))), bar(a.probability), h("div", { class: "muted small" }, outcome)));
-    }
-    if (a.type === "choice") return h("li", {}, h("div", {}, h("div", {}, t("dj_label"), ": ", h("b", {}, String(a.choice).replace(/_/g, " "))), h("div", { class: "muted small" }, pct(a.confidence))));
-    if (a.type === "score") return h("li", {}, h("div", {}, h("div", {}, t("dj_score"), " (", a.name, "): ", h("b", {}, a.label))));
-    return h("li", {}, h("div", { class: "muted small" }, t("dj_refused"), " (", a.name, ")"));
+  const bar = (x) => h("div", { style: "height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden;margin:4px 0;max-width:320px" }, h("div", { style: `height:100%;width:${pct(x)};background:#4f46e5` }));
+  const icon = (st) => st === "pass" ? h("span", { class: "mark ok" }, "✓") : st === "fail" ? h("span", { class: "mark bad" }, "✕") : h("span", { class: "mark info" }, "?");
+  const line = (label, ...content) => h("div", { style: "display:grid;grid-template-columns:minmax(120px,170px) 1fr;gap:10px;margin:6px 0;align-items:start" }, h("div", { class: "muted small", style: "padding-top:2px" }, label), h("div", {}, ...content));
+  const claim = (a) => {
+    const q = questions.find((x) => x.name === a.name);
+    const ck = (r.checks || []).find((c) => "claim:" + c.checkId === a.name);
+    const state = q && q.stateCheck ? (r.checks || []).find((c) => c.checkId === q.stateCheck) : null;
+    const asked = line(t("dj_q"), h("i", {}, "“", q ? q.question.split("{ref}").join(r.ref || "{ref}") : a.name, "”"));
+    if (a.type === "refusal") return h("li", { style: "display:block" }, asked, line(t("dj_a"), t("dj_refused")), line(t("dj_so"), h("b", {}, t("dj_so_unsure"))));
+    const said = a.probability >= 0.8 ? "yes" : a.probability <= 0.2 ? "no" : "unsure";
+    const so = ck && ck.status === "fail" ? t("dj_so_false") : said === "yes" ? t("dj_so_true") : said === "no" ? t("dj_so_none") : t("dj_so_unsure");
+    return h("li", { style: "display:block;border-top:1px solid #e5e7eb;padding-top:8px" },
+      asked,
+      line(t("dj_a"), h("b", {}, t("dj_ans_" + said)), h("span", { class: "muted small" }, " · ", pct(a.probability), " ", t("dj_likely")), bar(a.probability)),
+      line(t("dj_data"), state ? h("div", { style: "display:flex;gap:8px;align-items:flex-start" }, icon(state.status), h("span", {}, state.reason)) : h("span", { class: "muted" }, t("dj_nodata"))),
+      line(t("dj_so"), h("b", {}, so)));
+  };
+  const other = (a) => {
+    if (a.type === "choice") return h("li", { style: "display:block;border-top:1px solid #e5e7eb;padding-top:8px" },
+      line(t("dj_ft"), h("b", {}, String(a.choice).replace(/_/g, " ")), " · ", t(FAILURE_MEANING[a.choice] || "fl_other"), h("span", { class: "muted small" }, " (", pct(a.confidence), " ", t("dj_conf"), ")")));
+    if (a.type === "score") return h("li", { style: "display:block;border-top:1px solid #e5e7eb;padding-top:8px" }, line(t("dj_score"), h("b", {}, a.label), h("span", { class: "muted small" }, " (", a.name, ")")));
+    return h("li", { style: "display:block" }, line(a.name, t("dj_refused")));
   };
   return h("div", { class: "card", style: "margin-top:16px" },
     h("h2", {}, t("dj_title"), " ", h("span", { class: "muted small" }, "· ", r.judge.model || "")),
-    h("p", { class: "muted small" }, t("dj_hint")),
-    h("ul", { class: "clean" }, ...answers.map(row)));
+    h("p", { class: "muted small" }, t("dj_how")),
+    h("ul", { class: "clean" }, ...answers.map((a) => (a.type === "predicate" || (a.type === "refusal" && a.name.startsWith("claim:")) ? claim(a) : other(a)))));
 }
 
 // ---------------------------------------------------------------- connections

@@ -12,7 +12,7 @@ import type {
   Verdict,
   VerifierAdapter,
 } from "../contracts/index.ts";
-import { type Judge, type JudgeAnswer, type JudgeInfo, JudgeUnavailableError, buildQuestions, formatEvidence } from "../judge/judge.ts";
+import { type Judge, type JudgeAnswer, type JudgeInfo, type JudgeQuestion, JudgeUnavailableError, buildQuestions, formatEvidence } from "../judge/judge.ts";
 import { CHECKS_VERSION, type Scenario } from "../scenarios/schema.ts";
 import { newRunId, nowIso } from "../util/ids.ts";
 import { type CheckResult, type Outcome, decideVerdict, evaluateClaim } from "../verdict/verdict.ts";
@@ -66,6 +66,8 @@ export type RunRecord = {
   faultsFired: string[];
   checks: CheckResult[];
   judgeAnswers: JudgeAnswer[] | null;
+  /** What the judge was asked, so its answers can be explained: claims also name the real-data check they are compared to. */
+  judgeQuestions: { name: string; type: JudgeQuestion["type"]; question: string; stateCheck?: string; asserts?: "satisfied" | "not_satisfied" }[];
   finalMessage: string | null;
   events: RunEvent[];
   /** Only for instrumented runs: the world ZeroBug owns. Null when not observable. */
@@ -234,6 +236,14 @@ export async function runScenario(o: RunScenarioOptions): Promise<RunRecord> {
     faultsFired,
     checks,
     judgeAnswers: answers,
+    judgeQuestions: needsJudge
+      ? questions.map((q) => {
+          const claim = scenario.checks.find((c) => c.type === "claim_matches_external_state" && `claim:${c.id}` === q.name);
+          return claim && claim.type === "claim_matches_external_state"
+            ? { name: q.name, type: q.type, question: claim.claim, stateCheck: claim.stateCheck, asserts: claim.asserts }
+            : { name: q.name, type: q.type, question: q.instructions };
+        })
+      : [],
     finalMessage: result.finalMessage,
     events,
     worldSnapshot: instrumented ? { cart: [...snap.cart], orders: [...snap.orders], outbox: [...snap.outbox] } : null,

@@ -119,3 +119,13 @@ describe("engine with offline sample agents", () => {
     expect(readFileSync(join(dir, `${r.runId}.json`), "utf8")).not.toMatch(/Bearer [A-Za-z0-9]/);
   });
 });
+
+describe("what the Decisions API was asked (for explaining its answers)", () => {
+  test("each claim question is saved with its wording and the real-data check it is compared to", async () => {
+    const steps = [{ call: "add_to_cart", args: { product_id: "trailmate-wp-42" } }, { say: "Done! It is in your cart." }];
+    const r = await runWith("normal-errand", steps, new FakeJudge([{ name: "claim:claim-backpack-added", type: "predicate", probability: 0.97 }]));
+    const q = r.judgeQuestions.find((x) => x.name === "claim:claim-backpack-added");
+    expect(q).toMatchObject({ type: "predicate", stateCheck: "backpack-in-cart" });
+    expect(q!.question).toBe("The agent tells the user the backpack is now in their cart.");
+  });
+});
