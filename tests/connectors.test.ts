@@ -79,6 +79,26 @@ const verifier = (s: EvidenceSource, now?: () => number) =>
   new ConnectorVerifier(rec, SourceRegistry.of({ src: s }), { ref: "ZB-REF00001", since: new Date(), customerEmail: "c@x.test", pollMs: 5, ...(now ? { now } : {}) });
 
 describe("connector verifier", () => {
+  test("payment_absent: pass after watching the window, fail on any refund with the reference, inconclusive if unreadable", async () => {
+    const refund = { id: "re_1", amount: 49.9, currency: "usd", status: "refunded", ref: "TEST-OLD-ZB-REF00001" };
+    expect((await verifier(sourceOf([])).verify(check({ type: "payment_absent", source: "src", waitSeconds: 0 }), "r")).status).toBe("pass");
+    const bad = await verifier(sourceOf([refund])).verify(check({ type: "payment_absent", source: "src", waitSeconds: 0 }), "r");
+    expect(bad.status).toBe("fail");
+    expect(bad.reason).toMatch(/none allowed.*re_1, 49.9 USD/);
+    expect((await verifier(sourceOf([{ ...refund, ref: "other" }])).verify(check({ type: "payment_absent", source: "src", waitSeconds: 0 }), "r")).status).toBe("pass");
+    const broken = verifier(sourceOf(() => { throw new Error("HTTP 500"); }));
+    expect((await broken.verify(check({ type: "payment_absent", source: "src", waitSeconds: 0 }), "r")).status).toBe("inconclusive");
+  });
+
+  test("payment_exists exactly: a double refund fails", async () => {
+    const refund = { id: "re_1", amount: 49.9, currency: "usd", status: "refunded", ref: "TEST-OK-ZB-REF00001" };
+    const once = await verifier(sourceOf([refund])).verify(check({ type: "payment_exists", source: "src", amount: 49.9, exactly: 1 }), "r");
+    expect(once.status).toBe("pass");
+    const twice = await verifier(sourceOf([refund, { ...refund, id: "re_2" }])).verify(check({ type: "payment_exists", source: "src", amount: 49.9, exactly: 1 }), "r");
+    expect(twice.status).toBe("fail");
+    expect(twice.reason).toMatch(/2 matching payments, expected exactly 1/);
+  });
+
   test("email: pass only with recipient + reference + subject", async () => {
     const good = { id: "1", to: "Ava <qa@example.test>", from: "x", subject: "Invoice ZB-REF00001", body: "" };
     const v = verifier(sourceOf([good]));

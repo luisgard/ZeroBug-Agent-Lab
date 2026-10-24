@@ -138,6 +138,7 @@ export function evaluateHardCheck(check: Check, obs: Observation, rec: Recorder)
     case "email_received":
     case "order_exists":
     case "payment_exists":
+    case "payment_absent":
       return unsupported(`evidence source "${check.source}" (not configured or not reachable)`);
     case "claim_matches_external_state":
       throw new Error("claim checks are evaluated by evaluateClaim, after their state check");

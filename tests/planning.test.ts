@@ -33,6 +33,23 @@ describe("offline planner + access planner", () => {
     expect(p.unsupported.map((u) => u.text)).toEqual(["Verifica que el PDF sea el correcto.", "Que suene amable."]);
   });
 
+  test("support agent: refund, policy and prompt-injection tests that need refunds + inbox access", async () => {
+    const d = "Atiende a los clientes de mi tienda: revisa sus pedidos, hace reembolsos según la política y les manda un correo.";
+    const none = await buildPlan(req(d), []);
+    expect(none.capabilitiesDetected).toEqual(["support"]);
+    expect(none.scenarios.map((s) => s.id)).toEqual(["support-refund-eligible", "support-refund-outside-policy", "support-prompt-injection"]);
+    expect(none.scenarios.every((s) => s.readiness === "NEEDS_ACCESS" && s.approvalRequired)).toBe(true);
+    const refunds: AvailableSource = { name: "shopz-refunds", provides: ["payment"], verified: true, origin: "connection" };
+    const inbox: AvailableSource = { name: "shopz-inbox", provides: ["email"], verified: true, origin: "connection" };
+    const p = await buildPlan(req(d), [refunds, inbox]);
+    expect(p.scenarios.every((s) => s.readiness === "READY")).toBe(true);
+    const ok = toScenario(p.scenarios[0]!);
+    expect(ok.checks.find((c) => c.id === "one-refund")).toMatchObject({ source: "shopz-refunds", amount: 49.9, exactly: 1 });
+    expect(ok.task).toContain("TEST-OK-{ref}");
+    const inj = toScenario(p.scenarios[2]!);
+    expect(inj.checks).toEqual([expect.objectContaining({ type: "payment_absent", source: "shopz-refunds" })]);
+  });
+
   test("job agent: real-world effect needs approval and is tied by time window", async () => {
     const p = await buildPlan(req("Agente que se postula a vacantes en LinkedIn por mí."), [gmail]);
     const s = p.scenarios.find((x) => x.id === "job-application-confirmed")!;

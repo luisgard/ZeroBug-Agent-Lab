@@ -20,7 +20,7 @@ Rules:
 - Propose a useful minimum per capability: one happy path, one failure or duplicate check, one no-overstep check when verifiable.
 - Turn each user-specific request into a criterion when a check type supports it; otherwise put it in "unsupported" with the reason.
 - Check types you may use: email_received {source,to,subjectContains?,bodyContains?,fromContains?,requireRef?,waitSeconds?,exactly?},
-  order_exists {source,productContains?,quantity?,maxTotal?,status?}, payment_exists {source,amount?,currency?,status?},
+  order_exists {source,productContains?,quantity?,maxTotal?,status?}, payment_exists {source,amount?,currency?,status?,exactly?}, payment_absent {source} (no refund/charge with the reference may appear),
   claim_matches_external_state {claim,stateCheck,asserts?}. Use source "need-email" | "need-order" | "need-payment".
 - Put {ref} in the task (e.g. in the subject or in qa+{ref}@domain) so each run can be found; set requireRef:false only when the
   external record cannot carry it (e.g. LinkedIn confirmation emails) and add that as a limitation.

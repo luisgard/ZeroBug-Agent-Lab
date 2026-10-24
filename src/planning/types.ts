@@ -26,7 +26,7 @@ export const GeneratedScenarioSchema = z.strictObject({
   title: z.string().min(3).max(120),
   task: z.string().min(5).max(2000),
   source: z.enum(["AUTO", "USER", "HYBRID"]),
-  capability: z.enum(["email", "jobs", "shopping", "payments"]),
+  capability: z.enum(["email", "jobs", "shopping", "payments", "support"]),
   checks: z.array(CheckSchema).min(1).max(12),
   needs: z.array(z.strictObject({ kind: NeedKind, why: z.string().max(300) })).max(4),
   risk: z.enum(["LOW", "MEDIUM", "HIGH"]),

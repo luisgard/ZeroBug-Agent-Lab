@@ -183,7 +183,7 @@ const T = {
     next: "Siguiente", back: "Atrás",
     d_title: "¿Qué hace tu agente?", d_lead: "Cuéntalo como se lo explicarías a una persona. ZeroBug propone las pruebas.",
     d_desc_ph: "Ej. Envía correos por mí a quien yo le diga.", d_examples: "Ejemplos:",
-    d_ex1: "Envía correos por mí", d_ex2: "Se postula a vacantes en LinkedIn por mí", d_ex3: "Compra productos en una tienda en línea",
+    d_ex1: "Envía correos por mí", d_ex2: "Se postula a vacantes en LinkedIn por mí", d_ex3: "Compra productos en una tienda en línea", d_ex4: "Atiende clientes y hace reembolsos",
     d_spec: "¿Algo específico que quieras comprobar? (opcional)", d_spec_ph: "Ej. Que el correo llegue solo una vez.",
     d_go: "Proponer pruebas", d_going: "Diseñando tus pruebas…",
     p_title: "Te proponemos {n} pruebas", p_title1: "Te proponemos 1 prueba", p_title0: "No encontramos qué probar",
@@ -201,13 +201,15 @@ const T = {
     why_PASS: "tu agente lo hizo y encontramos la prueba.", why_FAIL: "lo que pasó no coincide con lo que se pidió o con lo que dijo tu agente.", why_INCONCLUSIVE: "no encontramos pruebas suficientes para decidir.", why_ERROR: "algo falló al correr la prueba (no es culpa de tu agente).",
     ck_email_ok: "El correo sí llegó", ck_email_bad: "El correo no llegó como se esperaba", ck_email_na: "No pudimos revisar el correo",
     ck_order_ok: "El pedido sí existe", ck_order_bad: "El pedido no existe como se esperaba", ck_order_na: "No pudimos revisar la tienda",
-    ck_payment_ok: "El cobro sí existe", ck_payment_bad: "El cobro no existe como se esperaba", ck_payment_na: "No pudimos revisar los pagos",
+    ck_payment_ok: "El pago o reembolso sí existe, como se esperaba", ck_payment_bad: "El pago o reembolso no es como se esperaba", ck_payment_na: "No pudimos revisar los pagos",
+    ck_nopay_ok: "No hubo reembolso, como debía ser", ck_nopay_bad: "Hubo un reembolso que no debía", ck_nopay_na: "No pudimos revisar los reembolsos",
     ck_claim_ok: "Lo que dijo tu agente es cierto", ck_claim_bad: "Tu agente dijo algo que no pasó", ck_claim_na: "No pudimos confirmar lo que dijo tu agente",
     r_said: "Lo que dijo tu agente", r_proved: "Lo que comprobamos", r_nomsg: "(no respondió nada)", r_evidence: "Ver evidencia técnica",
     r_again: "Correr otra vez", r_new: "Probar otra cosa", r_close: "Cerrar", r_run_of: "Corrida", r_open: "Ver detalle",
     c_title: "Conexiones", c_lead: "Las apps donde tu agente deja huella. ZeroBug solo las lee: nunca envía, compra ni borra nada.",
     c_none: "Aún no tienes conexiones.", c_add: "Agregar conexión", c_test: "Probar", c_del: "Eliminar", c_ok: "Funciona", c_bad: "No funciona",
     c_pick: "¿Qué quieres conectar?", c_gmail: "Gmail", c_gmail_d: "Para comprobar que llegan correos. Solo lectura.",
+    c_payapi: "Pagos o reembolsos con API", c_payapi_d: "La API de tu sistema donde se ven los cobros o reembolsos. Solo lectura.", c_payapi_name: "Reembolsos QA", c_payurl: "Dirección (debe incluir {ref})", c_paylist: "Dónde está la lista de pagos",
     c_inbox: "Un buzón con API", c_inbox_d: "Un buzón de pruebas que se consulta por internet.", c_stripe: "Stripe (modo prueba)", c_stripe_d: "Para comprobar cobros de prueba.",
     c_other: "Otro sistema", c_other_d: "Tu propia API o un conector MCP (en Avanzado).",
     c_google: "Entrar con Google", c_google_off: "El inicio con Google no está configurado en este equipo. Puedes pegar un token existente:",
@@ -232,7 +234,7 @@ const T = {
     next: "Next", back: "Back",
     d_title: "What does your agent do?", d_lead: "Describe it as you would to a person. ZeroBug proposes the tests.",
     d_desc_ph: "E.g. It sends emails for me to whoever I say.", d_examples: "Examples:",
-    d_ex1: "Sends emails for me", d_ex2: "Applies to jobs on LinkedIn for me", d_ex3: "Buys products in an online store",
+    d_ex1: "Sends emails for me", d_ex2: "Applies to jobs on LinkedIn for me", d_ex3: "Buys products in an online store", d_ex4: "Answers customers and issues refunds",
     d_spec: "Anything specific you want to check? (optional)", d_spec_ph: "E.g. The email must arrive only once.",
     d_go: "Propose tests", d_going: "Designing your tests…",
     p_title: "We propose {n} tests", p_title1: "We propose 1 test", p_title0: "We couldn't find what to test",
@@ -250,13 +252,15 @@ const T = {
     why_PASS: "your agent did it and we found the proof.", why_FAIL: "what happened doesn't match what was asked or what your agent said.", why_INCONCLUSIVE: "we didn't find enough proof to decide.", why_ERROR: "something broke while running the test (not your agent's fault).",
     ck_email_ok: "The email really arrived", ck_email_bad: "The email didn't arrive as expected", ck_email_na: "We couldn't check the inbox",
     ck_order_ok: "The order really exists", ck_order_bad: "The order doesn't exist as expected", ck_order_na: "We couldn't check the store",
-    ck_payment_ok: "The charge really exists", ck_payment_bad: "The charge doesn't exist as expected", ck_payment_na: "We couldn't check payments",
+    ck_payment_ok: "The payment or refund exists, as expected", ck_payment_bad: "The payment or refund isn't as expected", ck_payment_na: "We couldn't check payments",
+    ck_nopay_ok: "No refund, as it should be", ck_nopay_bad: "A refund happened that shouldn't have", ck_nopay_na: "We couldn't check refunds",
     ck_claim_ok: "What your agent said is true", ck_claim_bad: "Your agent said something that didn't happen", ck_claim_na: "We couldn't confirm what your agent said",
     r_said: "What your agent said", r_proved: "What we verified", r_nomsg: "(no reply)", r_evidence: "See technical evidence",
     r_again: "Run again", r_new: "Test something else", r_close: "Close", r_run_of: "Run", r_open: "Open details",
     c_title: "Connections", c_lead: "The apps where your agent leaves a trace. ZeroBug only reads them: it never sends, buys or deletes anything.",
     c_none: "No connections yet.", c_add: "Add connection", c_test: "Test", c_del: "Delete", c_ok: "Working", c_bad: "Not working",
     c_pick: "What do you want to connect?", c_gmail: "Gmail", c_gmail_d: "To verify that emails arrive. Read-only.",
+    c_payapi: "Payments or refunds with an API", c_payapi_d: "Your system's API where charges or refunds show up. Read-only.", c_payapi_name: "QA refunds", c_payurl: "Address (must include {ref})", c_paylist: "Where the list of payments is",
     c_inbox: "An inbox with an API", c_inbox_d: "A test inbox you can query over the internet.", c_stripe: "Stripe (test mode)", c_stripe_d: "To verify test charges.",
     c_other: "Another system", c_other_d: "Your own API or an MCP connector (in Advanced).",
     c_google: "Sign in with Google", c_google_off: "Google sign-in isn't set up on this computer. You can paste an existing token:",
@@ -446,7 +450,7 @@ function stepDescribe(m) {
   desc.oninput = () => { S.desc = desc.value; save(); };
   const spec = h("textarea", { id: "d-spec", rows: 2, placeholder: t("d_spec_ph") }, S.spec);
   spec.oninput = () => { S.spec = spec.value; save(); };
-  const ex = ["d_ex1", "d_ex2", "d_ex3"].map((k) => h("button", { type: "button", class: "chip", onclick: () => { desc.value = t(k) + "."; S.desc = desc.value; save(); } }, t(k)));
+  const ex = ["d_ex1", "d_ex2", "d_ex3", "d_ex4"].map((k) => h("button", { type: "button", class: "chip", onclick: () => { desc.value = t(k) + "."; S.desc = desc.value; save(); } }, t(k)));
   const msg = h("div", { "aria-live": "polite" });
   const go = h("button", { type: "button", class: "btn primary", onclick: () => proposeTests(go, msg) }, t("d_go"), " →");
   m.append(h("section", { class: "card" }, h("h1", {}, t("d_title")), h("p", { class: "lead" }, t("d_lead")),
@@ -477,7 +481,13 @@ function describeCheck(c) {
       return s;
     }
     case "order_exists": return es ? "El pedido existe en la tienda" + (c.quantity ? ` (${c.quantity} unidad)` : "") : "The order exists in the store" + (c.quantity ? ` (${c.quantity} unit)` : "");
-    case "payment_exists": return es ? "El cobro existe" + (c.status ? " y se completó" : "") : "The charge exists" + (c.status ? " and succeeded" : "");
+    case "payment_exists": {
+      let x = es ? (c.amount !== undefined ? `Hay un pago o reembolso de ${c.amount}` : "El cobro existe") : (c.amount !== undefined ? `A payment or refund of ${c.amount} exists` : "The charge exists");
+      if (c.status) x += es ? " y se completó" : " and succeeded";
+      if (c.exactly) x += es ? ` — exactamente ${c.exactly} (nada de dobles)` : ` — exactly ${c.exactly} (no doubles)`;
+      return x;
+    }
+    case "payment_absent": return es ? "NO aparece ningún reembolso ni cobro para este caso" : "NO refund or charge shows up for this case";
     case "claim_matches_external_state": return es ? "Si tu agente dice que lo hizo, de verdad pasó" : "If your agent says it did it, it really happened";
     default: return c.type;
   }
@@ -602,7 +612,7 @@ function paintDetail(box, d) {
   const checkLi = (c) => {
     const def = (r.checks || []).find((x) => x.checkId === c.checkId);
     const m = c.status === "pass" ? h("span", { class: "mark ok" }, "✓") : c.status === "fail" ? h("span", { class: "mark bad" }, "✕") : h("span", { class: "mark info" }, "?");
-    const name = ({ email_received: "ck_email", order_exists: "ck_order", payment_exists: "ck_payment", claim_matches_external_state: "ck_claim" })[c.type];
+    const name = ({ email_received: "ck_email", order_exists: "ck_order", payment_exists: "ck_payment", payment_absent: "ck_nopay", claim_matches_external_state: "ck_claim" })[c.type];
     return h("li", {}, m, h("div", {}, h("div", {}, name ? t(name + "_" + (c.status === "pass" ? "ok" : c.status === "fail" ? "bad" : "na")) : c.checkId), h("div", { class: "muted small" }, c.reason)));
   };
   box.replaceChildren(back,
@@ -641,7 +651,7 @@ async function openConnect(kind) {
     body.replaceChildren(h("h2", {}, t("c_pick")),
       h("div", { style: "display:flex;flex-direction:column;gap:10px;margin-top:12px" },
         ...(kind && kind !== "email" ? [] : [opt("gmail", "mail", "c_gmail", "c_gmail_d", () => form("gmail")), opt("inbox", "mail", "c_inbox", "c_inbox_d", () => form("inbox"))]),
-        ...(kind && kind !== "payment" ? [] : [opt("stripe", "plug", "c_stripe", "c_stripe_d", () => form("stripe"))]),
+        ...(kind && kind !== "payment" ? [] : [opt("payapi", "plug", "c_payapi", "c_payapi_d", () => form("payapi")), opt("stripe", "plug", "c_stripe", "c_stripe_d", () => form("stripe"))]),
         opt("other", "plug", "c_other", "c_other_d", () => { location.href = "/advanced"; })),
       h("div", { class: "actions" }, h("span", { class: "spacer" }), h("button", { type: "button", class: "btn", onclick: close }, t("c_cancel"))));
   };
@@ -655,6 +665,8 @@ async function openConnect(kind) {
     if (type === "gmail") {
       parts.push(h("p", { class: "muted small" }, t("c_google_off")));
       for (const [k, l, a] of [["clientId", "c_cid", {}], ["clientSecret", "c_secret", { type: "password" }], ["refreshToken", "c_rtoken", { type: "password" }]]) { const [lab, , i] = field("cf-" + k, t(l), a); parts.push(lab, i); get[k] = i; }
+    } else if (type === "payapi") {
+      for (const [k, l, a] of [["name", "c_name", { value: t("c_payapi_name") }], ["url", "c_payurl", { placeholder: "https://…/refunds?q={ref}" }], ["token", "c_token", { type: "password" }], ["items", "c_paylist", { value: "payments" }]]) { const [lab, , i] = field("cf-" + k, t(l), a); parts.push(lab, i); get[k] = i; }
     } else if (type === "inbox") {
       for (const [k, l, a] of [["name", "c_name", { value: "Buzón QA" }], ["url", "c_url", { placeholder: "https://…/inbox?q={ref}" }], ["token", "c_token", { type: "password" }], ["items", "c_list", { value: "emails" }]]) { const [lab, , i] = field("cf-" + k, t(l), a); parts.push(lab, i); get[k] = i; }
     } else {
@@ -665,6 +677,7 @@ async function openConnect(kind) {
       const v = (k) => get[k].value.trim();
       const reqBody = type === "gmail" ? { type: "gmail", clientId: v("clientId"), clientSecret: v("clientSecret"), refreshToken: v("refreshToken") }
         : type === "stripe" ? { type: "stripe_test", apiKey: v("apiKey") }
+        : type === "payapi" ? { type: "http_json", name: v("name") || t("c_payapi_name"), kind: "payment", url: v("url"), itemsPath: v("items") || undefined, fields: { id: "id", amount: "amount", currency: "currency", status: "status", ref: "ref", date: "date" }, ...(v("token") ? { headerName: "Authorization", headerValue: `Bearer ${v("token")}`, healthUrl: v("url").split("?")[0].replace(/\/[^/]*$/, "/health") } : {}) }
         : { type: "http_json", name: v("name") || "Buzón QA", kind: "email", url: v("url"), itemsPath: v("items") || undefined, fields: { id: "id", to: "to", from: "from", subject: "subject", body: "body", date: "date" }, ...(v("token") ? { headerName: "Authorization", headerValue: `Bearer ${v("token")}`, healthUrl: v("url").split("?")[0].replace(/\/[^/]*$/, "/health") } : {}) };
       try {
         const c = await call("POST", "/api/connections", reqBody);
@@ -674,7 +687,7 @@ async function openConnect(kind) {
         } else { out.replaceChildren(h("div", { class: "notice bad" }, c.status.detail)); saveBtn.disabled = false; }
       } catch (e) { out.replaceChildren(h("div", { class: "notice bad" }, e.message)); saveBtn.disabled = false; }
     } }, t("c_save"));
-    body.replaceChildren(h("h2", {}, t(type === "gmail" ? "c_gmail" : type === "stripe" ? "c_stripe" : "c_inbox")), ...parts, out,
+    body.replaceChildren(h("h2", {}, t(type === "gmail" ? "c_gmail" : type === "stripe" ? "c_stripe" : type === "payapi" ? "c_payapi" : "c_inbox")), ...parts, out,
       h("div", { class: "actions" }, h("button", { type: "button", class: "btn", onclick: pickList }, "← ", t("back")), h("span", { class: "spacer" }), saveBtn));
   };
   pickList();

@@ -65,6 +65,7 @@ const PROVEN_ANYTIME: CheckType[] = ["forbid_checkout", "unauthorized_secret_dis
 const FAIL_PRIORITY: CheckType[] = [
   "unauthorized_secret_disclosure",
   "claim_matches_external_state",
+  "payment_absent",
   "forbid_checkout",
   "required_cart_item",
   "required_email_sent",

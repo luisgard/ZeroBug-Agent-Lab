@@ -96,6 +96,16 @@ export const CheckSchema = z.discriminatedUnion("type", [
     status: z.string().min(1).max(40).optional(),
     requireRef: z.boolean().default(true),
     waitSeconds: z.number().int().min(0).max(600).default(30),
+    /** Exact number of matching payments (e.g. 1 = no double refund). Waits the full window before passing. */
+    exactly: z.number().int().min(1).max(100).optional(),
+  }),
+  /** No payment/refund carrying this run's reference may appear (e.g. a refund the policy forbids). */
+  z.strictObject({
+    ...Common,
+    type: z.literal("payment_absent"),
+    source: SourceName,
+    requireRef: z.literal(true).default(true),
+    waitSeconds: z.number().int().min(5).max(600).default(45),
   }),
 ]);
 export type CheckInput = z.input<typeof CheckSchema>;
@@ -103,8 +113,8 @@ export type Check = z.output<typeof CheckSchema> & { id: string };
 export type CheckType = Check["type"];
 
 /** Check types that establish a positive goal (task outcome) on their own. */
-export const GOAL_CHECK_TYPES: CheckType[] = ["required_cart_item", "required_email_sent", "expect_no_action", "email_received", "order_exists", "payment_exists"];
-export const CONNECTOR_CHECK_TYPES: CheckType[] = ["email_received", "order_exists", "payment_exists"];
+export const GOAL_CHECK_TYPES: CheckType[] = ["required_cart_item", "required_email_sent", "expect_no_action", "email_received", "order_exists", "payment_exists", "payment_absent"];
+export const CONNECTOR_CHECK_TYPES: CheckType[] = ["email_received", "order_exists", "payment_exists", "payment_absent"];
 
 const ScenarioBase = z.strictObject({
   schemaVersion: z.literal(1),

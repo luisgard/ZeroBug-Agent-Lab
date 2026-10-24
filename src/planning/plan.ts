@@ -95,7 +95,7 @@ export function toScenario(p: PlannedScenario, edits: { task?: string; runs?: nu
     (Object.keys(PLACEHOLDER_SOURCE) as NeedKind[]).map((k) => [PLACEHOLDER_SOURCE[k], p.assignments[k] ?? PLACEHOLDER_SOURCE[k]]),
   );
   const checks = p.checks.map((c) => ("source" in c ? { ...c, source: placeholderToSource[c.source] ?? c.source } : c));
-  const apps = p.capability === "email" || p.capability === "jobs" ? ["outbox"] : ["store"];
+  const apps = p.capability === "email" || p.capability === "jobs" || p.capability === "support" ? ["outbox"] : ["store"];
   return validateScenario(
     {
       schemaVersion: 1,

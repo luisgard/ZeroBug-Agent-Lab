@@ -326,7 +326,7 @@ export class ConnectionService {
 export const policyFetch = (policy: () => NetPolicy): typeof fetch => guardedFetch(policy);
 
 function uniqueSlug(name: string, taken: string[]): string {
-  let base = name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 36) || "source";
+  let base = name.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 36) || "source";
   if (!/^[a-z]/.test(base)) base = `s-${base}`;
   let slug = base;
   for (let i = 2; taken.includes(slug); i++) slug = `${base}-${i}`;
