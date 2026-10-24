@@ -192,7 +192,7 @@ const T = {
     p_title: "Te proponemos {n} pruebas", p_title1: "Te proponemos 1 prueba", p_title0: "No encontramos qué probar",
     p_lead: "Activa las que quieras. Solo corren las que ZeroBug puede comprobar de verdad.",
     p_ai_fallback: "La IA no logró proponer pruebas válidas esta vez (abajo verás por qué), así que usamos las reglas básicas.", p_rules: "Diseñadas con reglas básicas. Con una clave de OpenAI, la IA diseña pruebas más completas.", p_ai: "Diseñadas con IA (OpenAI Agents API) y revisadas con reglas.",
-    p_ready: "Lista", p_access: "Falta conectar {x}", p_review: "Revisa antes de correr", p_unsupported: "No soportada",
+    p_need_title: "Primero conecta dónde vas a comprobar los resultados", p_need_lead: "Las pruebas se activan solas cuando ZeroBug puede leer esos sistemas (solo lectura).", p_ready: "Lista", p_access: "Falta conectar {x}", p_review: "Revisa antes de correr", p_unsupported: "No soportada",
     p_expect: "Lo que esperamos (puedes ajustarlo a tu sistema)", p_expect_h: "Vacío = no se revisa. {ref} se cambia por la referencia única de cada corrida.",
     e_to: "Destinatario", e_subject: "El asunto contiene", e_exactly: "Exactamente cuántos", e_wait: "Esperar hasta (segundos)", e_amount: "Monto", e_currency: "Moneda (ej. USD, MXN)", e_status: "Estado", e_product: "El producto contiene", e_qty: "Cantidad", e_maxtotal: "Total máximo", e_none: "(no se revisa)",
     p_details: "Ver detalles", p_task: "Lo que le pediremos a tu agente", p_checks: "Lo que vamos a comprobar", p_limits: "A tener en cuenta",
@@ -214,7 +214,7 @@ const T = {
     c_title: "Conexiones", c_lead: "Las apps donde tu agente deja huella. ZeroBug solo las lee: nunca envía, compra ni borra nada.",
     c_none: "Aún no tienes conexiones.", c_add: "Agregar conexión", c_test: "Probar", c_del: "Eliminar", c_ok: "Funciona", c_bad: "No funciona",
     c_pick: "¿Qué quieres conectar?", c_gmail: "Gmail", c_gmail_d: "Para comprobar que llegan correos. Solo lectura.",
-    c_payapi: "Pagos o reembolsos con API", c_payapi_d: "La API de tu sistema donde se ven los cobros o reembolsos. Solo lectura.", c_payapi_name: "Reembolsos QA", c_payurl: "Dirección (debe incluir {ref})", c_paylist: "Dónde está la lista de pagos",
+    c_fill_shopz: "Rellenar con el ejemplo ShopZ", c_payapi: "Pagos o reembolsos con API", c_payapi_d: "La API de tu sistema donde se ven los cobros o reembolsos. Solo lectura.", c_payapi_name: "Reembolsos QA", c_payurl: "Dirección (debe incluir {ref})", c_paylist: "Dónde está la lista de pagos",
     c_inbox: "Un buzón con API", c_inbox_d: "Un buzón de pruebas que se consulta por internet.", c_stripe: "Stripe (modo prueba)", c_stripe_d: "Para comprobar cobros de prueba.",
     c_other: "Otro sistema", c_other_d: "Tu propia API o un conector MCP (en Avanzado).",
     c_google: "Entrar con Google", c_google_off: "El inicio con Google no está configurado en este equipo. Puedes pegar un token existente:",
@@ -245,7 +245,7 @@ const T = {
     p_title: "We propose {n} tests", p_title1: "We propose 1 test", p_title0: "We couldn't find what to test",
     p_lead: "Turn on the ones you want. Only tests ZeroBug can really verify will run.",
     p_ai_fallback: "The AI couldn't propose valid tests this time (see why below), so the basic rules were used.", p_rules: "Designed with basic rules. With an OpenAI key, AI designs more complete tests.", p_ai: "Designed with AI (OpenAI Agents API) and checked with rules.",
-    p_ready: "Ready", p_access: "Connect {x} first", p_review: "Review before running", p_unsupported: "Not supported",
+    p_need_title: "First connect where results will be checked", p_need_lead: "Tests turn on by themselves once ZeroBug can read those systems (read-only).", p_ready: "Ready", p_access: "Connect {x} first", p_review: "Review before running", p_unsupported: "Not supported",
     p_expect: "What we expect (adjust it to your system)", p_expect_h: "Empty = not checked. {ref} becomes each run's unique reference.",
     e_to: "Recipient", e_subject: "Subject contains", e_exactly: "Exactly how many", e_wait: "Wait up to (seconds)", e_amount: "Amount", e_currency: "Currency (e.g. USD, MXN)", e_status: "Status", e_product: "Product contains", e_qty: "Quantity", e_maxtotal: "Max total", e_none: "(not checked)",
     p_details: "See details", p_task: "What we'll ask your agent", p_checks: "What we'll verify", p_limits: "Keep in mind",
@@ -267,7 +267,7 @@ const T = {
     c_title: "Connections", c_lead: "The apps where your agent leaves a trace. ZeroBug only reads them: it never sends, buys or deletes anything.",
     c_none: "No connections yet.", c_add: "Add connection", c_test: "Test", c_del: "Delete", c_ok: "Working", c_bad: "Not working",
     c_pick: "What do you want to connect?", c_gmail: "Gmail", c_gmail_d: "To verify that emails arrive. Read-only.",
-    c_payapi: "Payments or refunds with an API", c_payapi_d: "Your system's API where charges or refunds show up. Read-only.", c_payapi_name: "QA refunds", c_payurl: "Address (must include {ref})", c_paylist: "Where the list of payments is",
+    c_fill_shopz: "Fill in with the ShopZ example", c_payapi: "Payments or refunds with an API", c_payapi_d: "Your system's API where charges or refunds show up. Read-only.", c_payapi_name: "QA refunds", c_payurl: "Address (must include {ref})", c_paylist: "Where the list of payments is",
     c_inbox: "An inbox with an API", c_inbox_d: "A test inbox you can query over the internet.", c_stripe: "Stripe (test mode)", c_stripe_d: "To verify test charges.",
     c_other: "Another system", c_other_d: "Your own API or an MCP connector (in Advanced).",
     c_google: "Sign in with Google", c_google_off: "Google sign-in isn't set up on this computer. You can paste an existing token:",
@@ -477,6 +477,19 @@ async function proposeTests(btn, msg) {
   } catch (e) { msg && msg.replaceChildren(h("div", { class: "notice bad" }, e.message)); if (btn) btn.disabled = false; }
 }
 
+/** After a new connection: re-check which tests are ready, keeping the person's choices and edits. */
+async function refreshAccess() {
+  try {
+    const plan = await call("POST", `/api/plan/${S.plan.planId}/access`, {});
+    for (const sc of plan.scenarios) {
+      const was = S.plan.scenarios.find((x) => x.id === sc.id);
+      if (sc.readiness === "READY" && was && was.readiness !== "READY" && S.picks[sc.id]) S.picks[sc.id].on = true;
+    }
+    S.plan = plan;
+  } catch {}
+  render();
+}
+
 // ---------------------------------------------------------------- step 3: tests
 function describeCheck(c) {
   const es = lang === "es";
@@ -506,6 +519,13 @@ function stepTests(m) {
   const head = h("section", { class: "card" }, h("h1", {}, n === 0 ? t("p_title0") : n === 1 ? t("p_title1") : t("p_title", { n })), h("p", { class: "lead" }, t("p_lead")),
     h("div", { class: "notice " + (p.planner.kind === "agents_api" ? "info" : "neutral"), style: "margin-top:0" }, p.planner.kind === "agents_api" ? t("p_ai") : /AI planner|Agents API planner failed/.test(p.planner.note || "") ? t("p_ai_fallback") : t("p_rules")));
   m.append(head);
+  const missingKinds = [...new Set(p.scenarios.filter((s) => s.readiness === "NEEDS_ACCESS").flatMap((s) => s.needs.filter((n) => !s.assignments[n.kind]).map((n) => n.kind)))];
+  if (missingKinds.length) {
+    m.append(h("section", { class: "card", style: "border-color:var(--warn);" },
+      h("h2", {}, t("p_need_title")),
+      h("p", { class: "muted", style: "margin-top:0" }, t("p_need_lead")),
+      h("div", { style: "display:flex;gap:10px;flex-wrap:wrap" }, ...missingKinds.map((k) => h("button", { type: "button", class: "btn primary", onclick: () => openConnect(k) }, t("p_connect", { x: t("k_" + k) }))))));
+  }
   for (const s of p.scenarios) m.append(testCard(s));
   if (p.unsupported.length) m.append(h("section", { class: "card" }, h("h2", {}, t("p_cant")), h("ul", { class: "clean" }, ...p.unsupported.map((u) => h("li", {}, h("span", { class: "mark warn" }, "!"), h("div", {}, h("b", {}, u.text), h("div", { class: "muted small" }, u.why)))))));
   if (!n) { m.append(h("div", { class: "actions" }, h("button", { type: "button", class: "btn", onclick: () => { S.step = 2; render(); } }, "← ", t("back")))); return; }
@@ -707,6 +727,15 @@ async function openConnect(kind) {
     } else {
       for (const [k, l, a] of [["apiKey", "c_key", { type: "password", placeholder: "rk_test_…" }]]) { const [lab, , i] = field("cf-" + k, t(l), a); parts.push(lab, i); get[k] = i; }
     }
+    if (type === "payapi" || type === "inbox") {
+      const fill = h("button", { type: "button", class: "btn small", onclick: () => {
+        get.name.value = type === "payapi" ? "Reembolsos ShopZ" : "Correo ShopZ";
+        get.url.value = `http://127.0.0.1:3400/${type === "payapi" ? "refunds" : "inbox"}?q={ref}`;
+        get.token.value = "support-read-token";
+        get.items.value = type === "payapi" ? "payments" : "emails";
+      } }, t("c_fill_shopz"));
+      parts.unshift(h("div", { style: "margin:4px 0 8px" }, fill));
+    }
     const saveBtn = h("button", { type: "button", class: "btn primary", onclick: async () => {
       saveBtn.disabled = true; out.replaceChildren(h("div", { class: "notice neutral", style: "display:flex;gap:10px;align-items:center" }, h("span", { class: "spinner" }), t("c_saving")));
       const v = (k) => get[k].value.trim();
@@ -718,7 +747,7 @@ async function openConnect(kind) {
         const c = await call("POST", "/api/connections", reqBody);
         if (c.status.state === "VERIFIED") {
           out.replaceChildren(h("div", { class: "notice ok" }, "✓ ", c.name));
-          setTimeout(async () => { close(); if (S.view === "wizard" && S.step === 3) await proposeTests(null, null); else render(); }, 700);
+          setTimeout(async () => { close(); if (S.view === "wizard" && S.step === 3) await refreshAccess(); else render(); }, 700);
         } else { out.replaceChildren(h("div", { class: "notice bad" }, c.status.detail)); saveBtn.disabled = false; }
       } catch (e) { out.replaceChildren(h("div", { class: "notice bad" }, e.message)); saveBtn.disabled = false; }
     } }, t("c_save"));

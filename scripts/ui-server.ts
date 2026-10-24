@@ -217,7 +217,18 @@ async function api(method: string, path: string, body: unknown): Promise<unknown
     const model = hasKey && process.env.ZB_PLANNER !== "rules" ? new AgentsApiPlanner(new OpenAI() as any, process.env.ZB_AGENTS_MODEL ?? AGENTS_MODEL_DEFAULT) : undefined;
     const plan = await buildPlan(req, availableSources(), model);
     plans.set(plan.planId, plan);
+    for (const u of plan.unsupported.filter((x) => x.why.startsWith("AI planner:"))) console.warn(`[planner] AI test rejected — ${u.text}: ${u.why}`);
+    if (/Agents API planner failed/.test(plan.planner.note)) console.warn(`[planner] ${plan.planner.note}`);
     if (plans.size > 200) plans.delete(plans.keys().next().value!);
+    return plan;
+  }
+  const accessMatch = /^\/api\/plan\/([A-Za-z0-9_-]{8,40})\/access$/.exec(path);
+  if (method === "POST" && accessMatch) {
+    // Re-check access after a connection was added, without designing the tests again.
+    const plan = plans.get(accessMatch[1]!);
+    if (!plan) throw new HttpError(404, "Plan not found or expired; propose the tests again.");
+    const sourcesNow = availableSources();
+    plan.scenarios = plan.scenarios.map((p) => planAccess(p, sourcesNow));
     return plan;
   }
   if (method === "POST" && path === "/api/plan/run") {

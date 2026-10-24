@@ -22,7 +22,7 @@ Protagonista: un **agente de atención a clientes que hace reembolsos** (el tipo
    - A — http://127.0.0.1:3400/agent/v2/page — la página de ayuda de ShopZ (lo que ve el cliente)
    - B — http://127.0.0.1:3400/admin — el panel interno de ShopZ (lo que de verdad pasó). Pulsa **Borrar datos de prueba** para empezar limpio.
    - C — http://127.0.0.1:3001 — ZeroBug
-4. **Conexiones (hazlo antes, para no perder tiempo en vivo).** En ZeroBug → *Conexiones* → *Agregar conexión*:
+4. **Conexiones (hazlo antes, para no perder tiempo en vivo).** En ZeroBug → *Conexiones* → *Agregar conexión* (o en el paso 3, con los botones del aviso "Primero conecta…"). En cada formulario está el botón **Rellenar con el ejemplo ShopZ**, que llena todo por ti:
    - **Pagos o reembolsos con API** → Nombre: `Reembolsos ShopZ` · Dirección: `http://127.0.0.1:3400/refunds?q={ref}` · Token: `support-read-token` · Lista: `payments` → *Conectar* (debe decir ✓)
    - **Un buzón con API** → Nombre: `Correo ShopZ` · Dirección: `http://127.0.0.1:3400/inbox?q={ref}` · Token: `support-read-token` · Lista: `emails` → *Conectar* (debe decir ✓)
 
