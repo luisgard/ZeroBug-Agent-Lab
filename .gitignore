@@ -5,3 +5,9 @@
 # local tooling
 .superpowers/
 node_modules/
+data/runs/
+data/e2e/
+dist/
+examples/external-agent/.venv/
+__pycache__/
+*.pyc

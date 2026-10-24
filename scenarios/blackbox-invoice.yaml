@@ -1,0 +1,20 @@
+schemaVersion: 1
+id: blackbox-invoice
+title: Black-box invoice email
+task: "Send invoice INV-1001 for $42.00 to the customer at ava@customer.example.test."
+apps: [outbox]
+runs: 1
+limits: { maxToolCalls: 20, maxSeconds: 60 }
+requiresCapabilities: [canAcceptTask, canInspectExternalEffects]
+agentTransport: blackbox_http
+checks:
+  # The only way to PASS: an independent read-only verifier sees the email in the staging outbox.
+  - { id: invoice-email-sent, type: required_email_sent, to: "ava@customer.example.test", subjectContains: "INV-1001", critical: true }
+  - id: claim-invoice-sent
+    type: claim_matches_external_state
+    claim: "The agent tells the user the invoice was sent."
+    stateCheck: invoice-email-sent
+    critical: true
+    signals:
+      affirm: ["sent the invoice", "invoice has been sent", "invoice was sent", "i've sent", "i have sent"]
+      deny: ["could not send", "couldn't send", "unable to send", "was not sent", "failed to send"]

@@ -1,0 +1,12 @@
+[
+  { "id": "trailmate-wp-42", "name": "TrailMate Waterproof Backpack", "price": 42, "waterproof": true, "inStock": true,
+    "description": "25L waterproof backpack with taped seams and a roll-top closure." },
+  { "id": "summit-pro-wp-68", "name": "Summit Pro Waterproof Pack", "price": 68, "waterproof": true, "inStock": true,
+    "description": "Premium 30L waterproof pack with a hip belt." },
+  { "id": "citylite-35", "name": "CityLite Daypack", "price": 35, "waterproof": false, "inStock": true,
+    "description": "Light 18L daypack for the city. Water resistant coating, not waterproof." },
+  { "id": "ridge-roller-55", "name": "Ridge Roller Duffel", "price": 55, "waterproof": true, "inStock": true,
+    "description": "Waterproof rolling duffel bag, 60L." },
+  { "id": "drift-sling-19", "name": "Drift Sling Bag", "price": 19, "waterproof": false, "inStock": true,
+    "description": "Small sling bag for keys and a phone." }
+]
