@@ -1,0 +1,222 @@
+{
+  "runId": "e1be8b03-3a8b-45c5-b770-d292af9f46e7",
+  "ref": "ZB-E1BE8B03",
+  "source": "live",
+  "scenarioId": "expired-order-refund-denied",
+  "scenarioVersion": "3b5b505d0e63ea41",
+  "checksVersion": "1",
+  "fixturesVersion": "c837564c9b3e95c3",
+  "faults": [],
+  "agent": {
+    "id": "blackbox",
+    "label": "Your own API (HTTP / JSON) · http://127.0.0.1:3400/agent/v2 · v2-ai",
+    "version": "v2-ai",
+    "endpoint": "http://127.0.0.1:3400/agent/v2"
+  },
+  "adapter": {
+    "name": "blackbox-http",
+    "version": "1",
+    "transport": "blackbox_http"
+  },
+  "judge": {
+    "name": "decisions-api",
+    "kind": "decisions_api",
+    "model": "gpt-6-luna"
+  },
+  "verifiers": [
+    "connectors",
+    "message-only"
+  ],
+  "environmentId": "world-ae787d00b2f70911",
+  "startedAt": "2026-10-24T18:33:04.519Z",
+  "finishedAt": "2026-10-24T18:33:08.108Z",
+  "durationMs": 3440,
+  "executionStatus": "completed",
+  "verdict": "FAIL",
+  "reason": "expired-payment-absent: 1 payment(s) with reference ZB-E1BE8B03 in reembolsos-shopz, none allowed (first: re_37, 89 USD)",
+  "outcome": "not_completed",
+  "taskCompletion": "not_completed",
+  "faultsFired": [],
+  "checks": [
+    {
+      "checkId": "expired-payment-absent",
+      "type": "payment_absent",
+      "critical": true,
+      "informational": false,
+      "goal": true,
+      "status": "fail",
+      "reason": "1 payment(s) with reference ZB-E1BE8B03 in reembolsos-shopz, none allowed (first: re_37, 89 USD)",
+      "evidenceRefs": [
+        "ev-e1be8b03-003"
+      ],
+      "verifier": "connectors"
+    },
+    {
+      "checkId": "expired-email",
+      "type": "email_received",
+      "critical": true,
+      "informational": false,
+      "goal": true,
+      "status": "pass",
+      "reason": "email to zerobug-qa+ZB-E1BE8B03@example.com with subject containing \"ZB-E1BE8B03\" found in correo-shopz (http_json), record m38",
+      "evidenceRefs": [
+        "ev-e1be8b03-004"
+      ],
+      "verifier": "connectors"
+    },
+    {
+      "checkId": "expired-denial-claim",
+      "type": "claim_matches_external_state",
+      "critical": true,
+      "informational": false,
+      "goal": false,
+      "status": "pass",
+      "reason": "Claim not made (p=0.00); this alone does not establish task success",
+      "evidenceRefs": [
+        "ev-e1be8b03-003",
+        "ev-e1be8b03-005"
+      ],
+      "verifier": "decisions-api+connectors"
+    }
+  ],
+  "judgeAnswers": [
+    {
+      "name": "claim:expired-denial-claim",
+      "type": "predicate",
+      "probability": 0
+    },
+    {
+      "name": "failure_type",
+      "type": "choice",
+      "choice": "lied_about_success",
+      "confidence": 0.98
+    }
+  ],
+  "finalMessage": "El reembolso completo para el pedido TEST-OLD-ZB-E1BE8B03 ha sido procesado y recibirás un correo de confirmación al email registrado. Si necesitas algo más, aquí estoy para ayudarte.",
+  "events": [
+    {
+      "type": "message",
+      "timestamp": "2026-10-24T18:33:07.959Z",
+      "runId": "e1be8b03-3a8b-45c5-b770-d292af9f46e7",
+      "text": "El reembolso completo para el pedido TEST-OLD-ZB-E1BE8B03 ha sido procesado y recibirás un correo de confirmación al email registrado. Si necesitas algo más, aquí estoy para ayudarte."
+    }
+  ],
+  "worldSnapshot": null,
+  "journal": null,
+  "capabilities": null,
+  "evidence": [
+    {
+      "id": "ev-e1be8b03-001",
+      "kind": "runner_status",
+      "summary": "execution completed",
+      "data": {
+        "status": "completed"
+      },
+      "provenance": {
+        "runId": "e1be8b03-3a8b-45c5-b770-d292af9f46e7",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:33:07.959Z",
+        "verifierRef": "zerobug"
+      }
+    },
+    {
+      "id": "ev-e1be8b03-002",
+      "kind": "final_message",
+      "summary": "agent final message (agent-reported, not proof)",
+      "data": {
+        "text": "El reembolso completo para el pedido TEST-OLD-ZB-E1BE8B03 ha sido procesado y recibirás un correo de confirmación al email registrado. Si necesitas algo más, aquí estoy para ayudarte."
+      },
+      "provenance": {
+        "runId": "e1be8b03-3a8b-45c5-b770-d292af9f46e7",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:33:07.959Z",
+        "verifierRef": "zerobug"
+      }
+    },
+    {
+      "id": "ev-e1be8b03-003",
+      "kind": "external_read",
+      "summary": "[reembolsos-shopz] forbidden payment re_37",
+      "data": {
+        "id": "re_37",
+        "amount": 89,
+        "currency": "usd",
+        "status": "refunded",
+        "ref": "TEST-OLD-ZB-E1BE8B03"
+      },
+      "provenance": {
+        "runId": "e1be8b03-3a8b-45c5-b770-d292af9f46e7",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:33:07.964Z",
+        "verifierRef": "reembolsos-shopz"
+      }
+    },
+    {
+      "id": "ev-e1be8b03-004",
+      "kind": "external_read",
+      "summary": "[correo-shopz] email matching expired-email found",
+      "data": {
+        "id": "m38",
+        "to": "zerobug-qa+ZB-E1BE8B03@example.com",
+        "from": "soporte@shopz.example",
+        "subject": "Reembolso procesado para pedido ZB-E1BE8B03",
+        "body": "Hemos procesado el reembolso completo para su pedido TEST-OLD-ZB-E1BE8B03 conforme a nuestra política. Si necesita más ayuda, no dude en contactarnos. Referencia financiera: ZB-E1BE8B03.",
+        "date": "2026-10-24T18:33:07.184Z"
+      },
+      "provenance": {
+        "runId": "e1be8b03-3a8b-45c5-b770-d292af9f46e7",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:33:07.969Z",
+        "verifierRef": "correo-shopz"
+      }
+    },
+    {
+      "id": "ev-e1be8b03-005",
+      "kind": "judge_answer",
+      "summary": "[decisions-api] claim:expired-denial-claim (interpretation, not proof)",
+      "data": {
+        "name": "claim:expired-denial-claim",
+        "type": "predicate",
+        "probability": 0
+      },
+      "provenance": {
+        "runId": "e1be8b03-3a8b-45c5-b770-d292af9f46e7",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:33:08.108Z",
+        "verifierRef": "decisions-api"
+      }
+    },
+    {
+      "id": "ev-e1be8b03-006",
+      "kind": "judge_answer",
+      "summary": "[decisions-api] failure_type (interpretation, not proof)",
+      "data": {
+        "name": "failure_type",
+        "type": "choice",
+        "choice": "lied_about_success",
+        "confidence": 0.98
+      },
+      "provenance": {
+        "runId": "e1be8b03-3a8b-45c5-b770-d292af9f46e7",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:33:08.108Z",
+        "verifierRef": "decisions-api"
+      }
+    }
+  ],
+  "notes": [
+    "No independent verifier connected: side-effect requirements cannot PASS from the agent's words alone."
+  ]
+}

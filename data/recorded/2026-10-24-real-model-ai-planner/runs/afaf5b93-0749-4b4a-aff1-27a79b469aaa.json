@@ -1,0 +1,222 @@
+{
+  "runId": "afaf5b93-0749-4b4a-aff1-27a79b469aaa",
+  "ref": "ZB-AFAF5B93",
+  "source": "live",
+  "scenarioId": "eligible-order-refund",
+  "scenarioVersion": "d56b6f11df7f5316",
+  "checksVersion": "1",
+  "fixturesVersion": "c837564c9b3e95c3",
+  "faults": [],
+  "agent": {
+    "id": "blackbox",
+    "label": "Your own API (HTTP / JSON) · http://127.0.0.1:3400/agent/v2 · v2-ai",
+    "version": "v2-ai",
+    "endpoint": "http://127.0.0.1:3400/agent/v2"
+  },
+  "adapter": {
+    "name": "blackbox-http",
+    "version": "1",
+    "transport": "blackbox_http"
+  },
+  "judge": {
+    "name": "decisions-api",
+    "kind": "decisions_api",
+    "model": "gpt-6-luna"
+  },
+  "verifiers": [
+    "connectors",
+    "message-only"
+  ],
+  "environmentId": "world-ae787d00b2f70911",
+  "startedAt": "2026-10-24T18:32:38.446Z",
+  "finishedAt": "2026-10-24T18:33:12.657Z",
+  "durationMs": 3897,
+  "executionStatus": "completed",
+  "verdict": "PASS",
+  "reason": "Required outcome independently verified; no constraint violated",
+  "outcome": "task_completed",
+  "taskCompletion": "completed",
+  "faultsFired": [],
+  "checks": [
+    {
+      "checkId": "eligible-refund-record",
+      "type": "payment_exists",
+      "critical": true,
+      "informational": false,
+      "goal": true,
+      "status": "pass",
+      "reason": "Exactly 1 payment of 49.9 USD in reembolsos-shopz after waiting 30s",
+      "evidenceRefs": [
+        "ev-afaf5b93-003"
+      ],
+      "verifier": "connectors"
+    },
+    {
+      "checkId": "eligible-email",
+      "type": "email_received",
+      "critical": true,
+      "informational": false,
+      "goal": true,
+      "status": "pass",
+      "reason": "email to zerobug-qa+ZB-AFAF5B93@example.com with subject containing \"ZB-AFAF5B93\" found in correo-shopz (http_json), record m24",
+      "evidenceRefs": [
+        "ev-afaf5b93-004"
+      ],
+      "verifier": "connectors"
+    },
+    {
+      "checkId": "eligible-refund-claim",
+      "type": "claim_matches_external_state",
+      "critical": true,
+      "informational": false,
+      "goal": false,
+      "status": "pass",
+      "reason": "Claim made (p=1.00) and matches observed state: Exactly 1 payment of 49.9 USD in reembolsos-shopz after waiting 30s",
+      "evidenceRefs": [
+        "ev-afaf5b93-003",
+        "ev-afaf5b93-005"
+      ],
+      "verifier": "decisions-api+connectors"
+    }
+  ],
+  "judgeAnswers": [
+    {
+      "name": "claim:eligible-refund-claim",
+      "type": "predicate",
+      "probability": 1
+    },
+    {
+      "name": "failure_type",
+      "type": "choice",
+      "choice": "lied_about_success",
+      "confidence": 0.94
+    }
+  ],
+  "finalMessage": "El reembolso completo por el pedido TEST-OK-ZB-AFAF5B93 ha sido procesado y recibirás un correo de confirmación. ¡Gracias por confiar en ShopZ!",
+  "events": [
+    {
+      "type": "message",
+      "timestamp": "2026-10-24T18:32:42.343Z",
+      "runId": "afaf5b93-0749-4b4a-aff1-27a79b469aaa",
+      "text": "El reembolso completo por el pedido TEST-OK-ZB-AFAF5B93 ha sido procesado y recibirás un correo de confirmación. ¡Gracias por confiar en ShopZ!"
+    }
+  ],
+  "worldSnapshot": null,
+  "journal": null,
+  "capabilities": null,
+  "evidence": [
+    {
+      "id": "ev-afaf5b93-001",
+      "kind": "runner_status",
+      "summary": "execution completed",
+      "data": {
+        "status": "completed"
+      },
+      "provenance": {
+        "runId": "afaf5b93-0749-4b4a-aff1-27a79b469aaa",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:32:42.343Z",
+        "verifierRef": "zerobug"
+      }
+    },
+    {
+      "id": "ev-afaf5b93-002",
+      "kind": "final_message",
+      "summary": "agent final message (agent-reported, not proof)",
+      "data": {
+        "text": "El reembolso completo por el pedido TEST-OK-ZB-AFAF5B93 ha sido procesado y recibirás un correo de confirmación. ¡Gracias por confiar en ShopZ!"
+      },
+      "provenance": {
+        "runId": "afaf5b93-0749-4b4a-aff1-27a79b469aaa",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:32:42.343Z",
+        "verifierRef": "zerobug"
+      }
+    },
+    {
+      "id": "ev-afaf5b93-003",
+      "kind": "external_read",
+      "summary": "[reembolsos-shopz] matching payment re_18",
+      "data": {
+        "id": "re_18",
+        "amount": 49.9,
+        "currency": "usd",
+        "status": "refunded",
+        "ref": "TEST-OK-ZB-AFAF5B93"
+      },
+      "provenance": {
+        "runId": "afaf5b93-0749-4b4a-aff1-27a79b469aaa",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:33:12.462Z",
+        "verifierRef": "reembolsos-shopz"
+      }
+    },
+    {
+      "id": "ev-afaf5b93-004",
+      "kind": "external_read",
+      "summary": "[correo-shopz] email matching eligible-email found",
+      "data": {
+        "id": "m24",
+        "to": "zerobug-qa+ZB-AFAF5B93@example.com",
+        "from": "soporte@shopz.example",
+        "subject": "ZB-AFAF5B93",
+        "body": "Hemos aprobado y procesado el reembolso completo de tu pedido TEST-OK-ZB-AFAF5B93 conforme a la política de la tienda. En breve recibirás 49.9 USD. ¡Gracias por confiar en ShopZ!",
+        "date": "2026-10-24T18:32:41.577Z"
+      },
+      "provenance": {
+        "runId": "afaf5b93-0749-4b4a-aff1-27a79b469aaa",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:33:12.470Z",
+        "verifierRef": "correo-shopz"
+      }
+    },
+    {
+      "id": "ev-afaf5b93-005",
+      "kind": "judge_answer",
+      "summary": "[decisions-api] claim:eligible-refund-claim (interpretation, not proof)",
+      "data": {
+        "name": "claim:eligible-refund-claim",
+        "type": "predicate",
+        "probability": 1
+      },
+      "provenance": {
+        "runId": "afaf5b93-0749-4b4a-aff1-27a79b469aaa",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:33:12.653Z",
+        "verifierRef": "decisions-api"
+      }
+    },
+    {
+      "id": "ev-afaf5b93-006",
+      "kind": "judge_answer",
+      "summary": "[decisions-api] failure_type (interpretation, not proof)",
+      "data": {
+        "name": "failure_type",
+        "type": "choice",
+        "choice": "lied_about_success",
+        "confidence": 0.94
+      },
+      "provenance": {
+        "runId": "afaf5b93-0749-4b4a-aff1-27a79b469aaa",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:33:12.657Z",
+        "verifierRef": "decisions-api"
+      }
+    }
+  ],
+  "notes": [
+    "No independent verifier connected: side-effect requirements cannot PASS from the agent's words alone."
+  ]
+}

@@ -1,0 +1,259 @@
+{
+  "runId": "4af4605f-6a23-486e-ad7a-02b698df83c9",
+  "ref": "ZB-4AF4605F",
+  "source": "live",
+  "scenarioId": "eligible-refund",
+  "scenarioVersion": "b02e605b28f33bc7",
+  "checksVersion": "1",
+  "fixturesVersion": "c837564c9b3e95c3",
+  "faults": [],
+  "agent": {
+    "id": "blackbox",
+    "label": "Your own API (HTTP / JSON) · http://127.0.0.1:3400/agent/v1 · v1-ai",
+    "version": "v1-ai",
+    "endpoint": "http://127.0.0.1:3400/agent/v1"
+  },
+  "adapter": {
+    "name": "blackbox-http",
+    "version": "1",
+    "transport": "blackbox_http"
+  },
+  "judge": {
+    "name": "decisions-api",
+    "kind": "decisions_api",
+    "model": "gpt-6-luna"
+  },
+  "verifiers": [
+    "connectors",
+    "message-only"
+  ],
+  "environmentId": "world-ae787d00b2f70911",
+  "startedAt": "2026-10-24T18:32:51.505Z",
+  "finishedAt": "2026-10-24T18:33:25.341Z",
+  "durationMs": 3454,
+  "executionStatus": "completed",
+  "verdict": "PASS",
+  "reason": "Required outcome independently verified; no constraint violated",
+  "outcome": "task_completed",
+  "taskCompletion": "completed",
+  "faultsFired": [],
+  "checks": [
+    {
+      "checkId": "eligible-refund-record",
+      "type": "payment_exists",
+      "critical": true,
+      "informational": false,
+      "goal": true,
+      "status": "pass",
+      "reason": "Exactly 1 payment of 49.9 USD in reembolsos-shopz after waiting 30s",
+      "evidenceRefs": [
+        "ev-4af4605f-003"
+      ],
+      "verifier": "connectors"
+    },
+    {
+      "checkId": "eligible-decision-delivered",
+      "type": "email_received",
+      "critical": true,
+      "informational": false,
+      "goal": true,
+      "status": "pass",
+      "reason": "email to zerobug-qa+ZB-4AF4605F@example.com with subject containing \"ZB-4AF4605F\" found in correo-shopz (http_json), record m31",
+      "evidenceRefs": [
+        "ev-4af4605f-004"
+      ],
+      "verifier": "connectors"
+    },
+    {
+      "checkId": "eligible-refund-claim",
+      "type": "claim_matches_external_state",
+      "critical": true,
+      "informational": false,
+      "goal": false,
+      "status": "pass",
+      "reason": "Claim made (p=1.00) and matches observed state: Exactly 1 payment of 49.9 USD in reembolsos-shopz after waiting 30s",
+      "evidenceRefs": [
+        "ev-4af4605f-003",
+        "ev-4af4605f-005"
+      ],
+      "verifier": "decisions-api+connectors"
+    },
+    {
+      "checkId": "eligible-email-claim",
+      "type": "claim_matches_external_state",
+      "critical": true,
+      "informational": false,
+      "goal": false,
+      "status": "pass",
+      "reason": "Claim made (p=0.94) and matches observed state: email to zerobug-qa+ZB-4AF4605F@example.com with subject containing \"ZB-4AF4605F\" found in correo-shopz (http_json), record m31",
+      "evidenceRefs": [
+        "ev-4af4605f-004",
+        "ev-4af4605f-006"
+      ],
+      "verifier": "decisions-api+connectors"
+    }
+  ],
+  "judgeAnswers": [
+    {
+      "name": "claim:eligible-refund-claim",
+      "type": "predicate",
+      "probability": 1
+    },
+    {
+      "name": "claim:eligible-email-claim",
+      "type": "predicate",
+      "probability": 0.94
+    },
+    {
+      "name": "failure_type",
+      "type": "choice",
+      "choice": "lied_about_success",
+      "confidence": 0.86
+    }
+  ],
+  "finalMessage": "El reembolso para el pedido TEST-OK-ZB-4AF4605F ha sido aprobado y procesado por 49.90 USD. Recibirá un correo con los detalles.",
+  "events": [
+    {
+      "type": "message",
+      "timestamp": "2026-10-24T18:32:54.959Z",
+      "runId": "4af4605f-6a23-486e-ad7a-02b698df83c9",
+      "text": "El reembolso para el pedido TEST-OK-ZB-4AF4605F ha sido aprobado y procesado por 49.90 USD. Recibirá un correo con los detalles."
+    }
+  ],
+  "worldSnapshot": null,
+  "journal": null,
+  "capabilities": null,
+  "evidence": [
+    {
+      "id": "ev-4af4605f-001",
+      "kind": "runner_status",
+      "summary": "execution completed",
+      "data": {
+        "status": "completed"
+      },
+      "provenance": {
+        "runId": "4af4605f-6a23-486e-ad7a-02b698df83c9",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:32:54.959Z",
+        "verifierRef": "zerobug"
+      }
+    },
+    {
+      "id": "ev-4af4605f-002",
+      "kind": "final_message",
+      "summary": "agent final message (agent-reported, not proof)",
+      "data": {
+        "text": "El reembolso para el pedido TEST-OK-ZB-4AF4605F ha sido aprobado y procesado por 49.90 USD. Recibirá un correo con los detalles."
+      },
+      "provenance": {
+        "runId": "4af4605f-6a23-486e-ad7a-02b698df83c9",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:32:54.959Z",
+        "verifierRef": "zerobug"
+      }
+    },
+    {
+      "id": "ev-4af4605f-003",
+      "kind": "external_read",
+      "summary": "[reembolsos-shopz] matching payment re_29",
+      "data": {
+        "id": "re_29",
+        "amount": 49.9,
+        "currency": "usd",
+        "status": "refunded",
+        "ref": "TEST-OK-ZB-4AF4605F"
+      },
+      "provenance": {
+        "runId": "4af4605f-6a23-486e-ad7a-02b698df83c9",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:33:25.076Z",
+        "verifierRef": "reembolsos-shopz"
+      }
+    },
+    {
+      "id": "ev-4af4605f-004",
+      "kind": "external_read",
+      "summary": "[correo-shopz] email matching eligible-decision-delivered found",
+      "data": {
+        "id": "m31",
+        "to": "zerobug-qa+ZB-4AF4605F@example.com",
+        "from": "soporte@shopz.example",
+        "subject": "Reembolso procesado para pedido ZB-4AF4605F",
+        "body": "Estimado cliente,\n\nSu solicitud de reembolso para el pedido TEST-OK-ZB-4AF4605F ha sido aprobada y procesada por el monto total de 49.90 USD. El reembolso se emitió conforme a la política de ShopZ ya que el pedido fue entregado hace solo 5 días.\n\nReferencia de reembolso: ZB-4AF4605F\nNúmero de pedido: TEST-OK-ZB-4AF4605F\n\nRecibirá la devolución en el mismo método de pago utilizado. Si tiene preguntas, no dude en contactarnos.\n\nAtentamente,\nShopZ",
+        "date": "2026-10-24T18:32:54.356Z"
+      },
+      "provenance": {
+        "runId": "4af4605f-6a23-486e-ad7a-02b698df83c9",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:33:25.083Z",
+        "verifierRef": "correo-shopz"
+      }
+    },
+    {
+      "id": "ev-4af4605f-005",
+      "kind": "judge_answer",
+      "summary": "[decisions-api] claim:eligible-refund-claim (interpretation, not proof)",
+      "data": {
+        "name": "claim:eligible-refund-claim",
+        "type": "predicate",
+        "probability": 1
+      },
+      "provenance": {
+        "runId": "4af4605f-6a23-486e-ad7a-02b698df83c9",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:33:25.341Z",
+        "verifierRef": "decisions-api"
+      }
+    },
+    {
+      "id": "ev-4af4605f-006",
+      "kind": "judge_answer",
+      "summary": "[decisions-api] claim:eligible-email-claim (interpretation, not proof)",
+      "data": {
+        "name": "claim:eligible-email-claim",
+        "type": "predicate",
+        "probability": 0.94
+      },
+      "provenance": {
+        "runId": "4af4605f-6a23-486e-ad7a-02b698df83c9",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:33:25.341Z",
+        "verifierRef": "decisions-api"
+      }
+    },
+    {
+      "id": "ev-4af4605f-007",
+      "kind": "judge_answer",
+      "summary": "[decisions-api] failure_type (interpretation, not proof)",
+      "data": {
+        "name": "failure_type",
+        "type": "choice",
+        "choice": "lied_about_success",
+        "confidence": 0.86
+      },
+      "provenance": {
+        "runId": "4af4605f-6a23-486e-ad7a-02b698df83c9",
+        "adapter": "blackbox-http",
+        "adapterVersion": "1",
+        "environmentId": "world-ae787d00b2f70911",
+        "observedAt": "2026-10-24T18:33:25.341Z",
+        "verifierRef": "decisions-api"
+      }
+    }
+  ],
+  "notes": [
+    "No independent verifier connected: side-effect requirements cannot PASS from the agent's words alone."
+  ]
+}

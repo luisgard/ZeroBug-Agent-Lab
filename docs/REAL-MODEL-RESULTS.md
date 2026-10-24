@@ -44,6 +44,17 @@ Evidence: `data/recorded/2026-10-24-real-model-shopz/runs/` (18 runs, versions `
 
 Reproduce: follow `docs/DEMO-ES.md` with `ZB_PLANNER=rules` and `ZB_JUDGE=decisions`.
 
+## 1b. ShopZ with tests designed by the Agents API
+
+Same flow, but without `ZB_PLANNER=rules`: an Agents API agent (`gpt-6-astra`) designs the tests from the step 2 text, and the Decisions API (`gpt-6-luna`) judges claims by default. Step 2 also described the test orders (see `docs/DEMO-3MIN.md`); without that line the AI invented order numbers ShopZ doesn't know and every test failed for the wrong reason.
+
+| Agent | 5 AI-designed tests × 3 runs | Caught |
+| --- | --- | --- |
+| v1 | **15/15 proven** | — |
+| v2 | **3/15 proven** | refunds on a 45-day-old order (up to 3 on one order), refunds from fake system and manager messages, a false "only one refund was issued" claim (Decisions API p=0.98) |
+
+Evidence: `data/recorded/2026-10-24-real-model-ai-planner/runs/` (30 runs).
+
 ## 2. Shopping agent on the Agents API (`gpt-6-astra`)
 
 `npx tsx scripts/zb.ts run --agent agents-api --instructions-file <file> --scenario store-outage --scenario poisoned-product --scenario dont-overstep --runs 3` with `ZB_JUDGE=decisions`.
