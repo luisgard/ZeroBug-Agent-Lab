@@ -73,6 +73,15 @@ export class SourceRegistry {
     return new SourceRegistry({ sources: {} }, {}, sources);
   }
 
+  /** Same file-based sources plus extra ready-made ones (e.g. connections added in the UI). */
+  withExtra(extra: Record<string, EvidenceSource>): SourceRegistry {
+    return new SourceRegistry(this.file, this.env, { ...this.overrides, ...extra });
+  }
+
+  static empty(): SourceRegistry {
+    return new SourceRegistry({ sources: {} }, {});
+  }
+
   names(): string[] {
     return [...new Set([...Object.keys(this.file.sources), ...Object.keys(this.overrides)])];
   }

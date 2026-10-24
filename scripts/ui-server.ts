@@ -26,6 +26,8 @@ import { fingerprint, newRunId } from "../src/util/ids.ts";
 import { loadLocalEnv } from "../src/util/env.ts";
 import { SourceRegistry } from "../src/connectors/registry.ts";
 import { BrowserChatRunner } from "../src/runner/browser.ts";
+import { ConnectionError, ConnectionService } from "../src/connections/service.ts";
+import { SecretBox } from "../src/connections/secret-box.ts";
 
 loadLocalEnv();
 
@@ -35,6 +37,11 @@ const bridge = new BridgeServer({ port: Number(process.env.ZB_BRIDGE_PORT ?? 300
 const live = new Map<string, { events: RunEvent[]; record: RunRecord | null; error: string | null }>();
 const hasKey = Boolean(process.env.OPENAI_API_KEY);
 const evidenceSources = SourceRegistry.load();
+const connections = new ConnectionService(SecretBox.fromEnvOrFile(), { policy: () => policyFromEnv(), ...(process.env.ZB_CONNECTIONS_FILE ? { file: process.env.ZB_CONNECTIONS_FILE } : {}) });
+const PUBLIC_URL = process.env.ZB_PUBLIC_URL ?? `http://127.0.0.1:${PORT}`;
+const GOOGLE_REDIRECT = `${PUBLIC_URL}/api/oauth/google/callback`;
+/** Evidence sources for a run: operator file + connections added in the UI. */
+const runSources = () => (evidenceSources ?? SourceRegistry.empty()).withExtra(connections.sources());
 const judge = process.env.ZB_JUDGE === "decisions" && hasKey ? new DecisionsJudge(new OpenAI()) : new HeuristicJudge();
 
 const Mapping = z.strictObject({ taskField: z.string(), responseField: z.string(), correlationField: z.string().optional() });
@@ -101,10 +108,19 @@ async function api(method: string, path: string, body: unknown): Promise<unknown
       judge: judge.info,
       samples: Object.entries(SAMPLE_AGENTS).map(([id, s]) => ({ id, label: s.label })),
       privateUrlsAllowed: policyFromEnv().allowPrivate,
-      evidenceSources: evidenceSources?.names() ?? [],
+      evidenceSources: runSources().names(),
     };
   }
   if (method === "GET" && path === "/api/scenarios") return loadScenarios().scenarios;
+  if (method === "GET" && path === "/api/connections/catalog") return { ...connections.catalog(), redirectUri: GOOGLE_REDIRECT };
+  if (method === "GET" && path === "/api/connections") {
+    const fileSources = evidenceSources?.names() ?? [];
+    return { connections: connections.list(), fileSources };
+  }
+  if (method === "POST" && path === "/api/connections") return connections.create(body);
+  const connMatch = /^\/api\/connections\/([A-Za-z0-9_-]{6,40})(\/test)?$/.exec(path);
+  if (connMatch && method === "POST" && connMatch[2]) return connections.test(connMatch[1]!);
+  if (connMatch && method === "DELETE" && !connMatch[2]) return connections.remove(connMatch[1]!);
   if (method === "POST" && path === "/api/connect") {
     const c = parse(Connect, body);
     const policy = policyFromEnv();
@@ -124,6 +140,7 @@ async function api(method: string, path: string, body: unknown): Promise<unknown
     });
     const runIds: string[] = [];
     const jobs: (() => Promise<void>)[] = [];
+    const sources = runSources();
     for (const scenario of scenarios) {
       for (let i = 0; i < req.repeats; i++) {
         const runId = newRunId();
@@ -132,7 +149,7 @@ async function api(method: string, path: string, body: unknown): Promise<unknown
         live.set(runId, entry);
         jobs.push(async () => {
           try {
-            entry.record = await runScenario({ scenario, agent, runner, judge, store, runId, ...(externalOutbox ? { externalOutbox } : {}), ...(evidenceSources ? { sources: evidenceSources } : {}), onEvent: (e) => entry.events.push(e) });
+            entry.record = await runScenario({ scenario, agent, runner, judge, store, runId, ...(externalOutbox ? { externalOutbox } : {}), sources, onEvent: (e) => entry.events.push(e) });
           } catch (err) {
             entry.error = (err as Error).message;
           }
@@ -141,6 +158,7 @@ async function api(method: string, path: string, body: unknown): Promise<unknown
     }
     void (async () => {
       for (const j of jobs) await j(); // sequential: predictable load on external agents
+      await sources.closeAll();
     })();
     return { runIds };
   }
@@ -185,12 +203,40 @@ const server = http.createServer(async (req, res) => {
     res.end(JSON.stringify(b));
   };
   try {
-    if (req.method === "GET" && (url.pathname === "/" || url.pathname.startsWith("/run/"))) {
+    if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/connections" || url.pathname.startsWith("/run/"))) {
       res.writeHead(200, { "content-type": "text/html; charset=utf-8", "content-security-policy": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'" });
       return res.end(readFileSync(pageUrl, "utf8"));
     }
+    if (req.method === "GET" && url.pathname === "/api/oauth/google/start") {
+      try {
+        res.writeHead(302, { location: connections.googleAuthUrl(GOOGLE_REDIRECT), "cache-control": "no-store" });
+      } catch (err) {
+        res.writeHead(302, { location: `/connections?error=${encodeURIComponent((err as Error).message)}` });
+      }
+      return res.end();
+    }
+    if (req.method === "GET" && url.pathname === "/api/oauth/google/callback") {
+      try {
+        const c = await connections.googleCallback(
+          { code: url.searchParams.get("code"), state: url.searchParams.get("state"), error: url.searchParams.get("error") },
+          GOOGLE_REDIRECT,
+        );
+        res.writeHead(302, { location: `/connections?connected=${encodeURIComponent(c.slug)}` });
+      } catch (err) {
+        res.writeHead(302, { location: `/connections?error=${encodeURIComponent((err as Error).message)}` });
+      }
+      return res.end();
+    }
     if (!url.pathname.startsWith("/api/")) return json(404, { error: "Not found" });
     let body: unknown = undefined;
+    if (req.method === "POST" || req.method === "DELETE") {
+      // CSRF guard for a localhost app: JSON only, and same-origin when the browser says where it came from.
+      const origin = req.headers.origin;
+      const allowed = [PUBLIC_URL, `http://127.0.0.1:${PORT}`, `http://localhost:${PORT}`];
+      if (!String(req.headers["content-type"] ?? "").startsWith("application/json") || (origin && !allowed.includes(origin))) {
+        return json(403, { error: "Cross-site or non-JSON request refused" });
+      }
+    }
     if (req.method === "POST") {
       const chunks: Buffer[] = [];
       let size = 0;
@@ -208,6 +254,7 @@ const server = http.createServer(async (req, res) => {
     json(200, await api(req.method ?? "GET", url.pathname, body));
   } catch (err) {
     if (err instanceof HttpError) return json(err.status, { error: err.message });
+    if (err instanceof ConnectionError) return json(400, { error: err.message });
     console.error(err);
     json(500, { error: "Internal error. The run state is preserved; check the server log." });
   }

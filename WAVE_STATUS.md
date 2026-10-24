@@ -9,7 +9,7 @@ Legend: **DONE** = implemented and exercised by a test or a recorded run in this
 | Command | Result |
 | --- | --- |
 | `npm run typecheck` | clean |
-| `npm test` | 11 files, **126 tests passed**, 0 failed (includes real headless Chromium tests) |
+| `npm test` | 12 files, **135 tests passed**, 0 failed (includes real headless Chromium tests) |
 | `cd examples/external-agent && .venv/bin/python -m unittest discover -s tests` | **5 tests passed** |
 | `npm run test:e2e` (two processes: LangGraph agent + ZeroBug) | **6 tests passed**; live provider test skipped (no key) |
 | `npm run proof` | **BLOCKED** — exit 3, `OPENAI_API_KEY` not set, nothing called |
@@ -29,6 +29,7 @@ Goal: verify actions of **real third-party agents** in the systems where they la
 | MCP connector (allow-list, write-tool refusal) | PARTIAL | Real MCP protocol with the official SDK. Not run against a third-party MCP server with an account. |
 | Browser chat runner (headless Chromium) | PARTIAL | Real Chromium against a local streaming chat page (`tests/browser.test.ts`). Not run against a third-party site. |
 | CLI `zb sources`, `--agent browser`; UI "Browser chat (beta)" tab | DONE | Manual check + Playwright smoke |
+| Connections screen (UI): catalog, Google sign-in (gmail.readonly), Stripe test, own API, MCP; encrypted secrets; test/delete; ES/EN | DONE (Google sign-in PARTIAL) | `tests/connections.test.ts`; Playwright run of the screen against a local API. Google OAuth not run with a real Google account. |
 | **Real third-party agent verified end to end** | **BLOCKED** | Needs a QA Gmail account (OAuth client + refresh token) and a third-party agent URL. |
 
 ## Spec 02 — acceptance gates

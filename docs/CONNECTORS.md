@@ -86,3 +86,24 @@ Edit the recipient address in the scenario to your QA inbox first.
 | Engine integration | Black-box HTTP agent and browser agent → connector check → PASS when the record exists, FAIL when the agent only claims it, INCONCLUSIVE without a source. |
 
 The first real validation needs: a QA Gmail account with the OAuth values above, and the URL of a third-party agent that can send email.
+
+## 7. Connections screen (UI)
+
+`npm run ui` → **2 · Connections** (Spanish/English toggle at the top right). People add evidence sources here without editing files; `zerobug.sources.json` still works for operators, and both are available to runs.
+
+| Catalog entry | How it connects | Status |
+| --- | --- | --- |
+| Gmail | **Sign in with Google** (OAuth, scope `gmail.readonly`, offline access) or an existing client ID/secret/refresh token | Available. Needs `ZB_GOOGLE_CLIENT_ID` and `ZB_GOOGLE_CLIENT_SECRET` on the server; redirect URI `ZB_PUBLIC_URL/api/oauth/google/callback` (default `http://127.0.0.1:3001/...`). |
+| LinkedIn | Through the Gmail connection (confirmation emails); LinkedIn has no public API to read applications | Available when Gmail is connected |
+| Stripe (test mode) | Restricted test key; live keys are refused | Available |
+| Your own API | URL with `{ref}`, field mapping, optional auth header, optional health URL | Available |
+| MCP server | URL, authorization header, one read-only tool, JSON or text parsing | Available |
+| Outlook, test inbox service, Shopify, Slack, Calendar, Activepieces | — | Coming soon (shown without controls) |
+
+How it behaves:
+- Every connection is tested with a real authenticated read when added and on **Test**; the result (VERIFIED / UNAVAILABLE and the reason) is shown and stored.
+- Each connection gets a name to use in scenarios, e.g. `source: shop-orders`.
+- Secrets are encrypted at rest with AES-256-GCM (`ZB_SECRET_KEY`, or a local key file `data/.zb-secret.key` created with owner-only permissions) in `data/connections.json` (git-ignored). The API never returns them.
+- URLs entered in the UI go through the same SSRF policy as agent URLs.
+- The UI API refuses cross-site and non-JSON requests (CSRF guard for a localhost app). The UI still has no login; it binds to 127.0.0.1.
+- Not yet validated against a real Google account (no OAuth client in the build environment); the OAuth flow is tested against Google's documented request/response shapes.

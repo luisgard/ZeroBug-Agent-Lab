@@ -20,7 +20,7 @@ export type McpConfig = {
   name: string;
   transport:
     | { type: "stdio"; command: string; args: string[]; env: Record<string, string>; cwd?: string }
-    | { type: "http"; url: string; headers: Record<string, string> };
+    | { type: "http"; url: string; headers: Record<string, string>; fetch?: typeof fetch };
   allowTools: string[];
   queries: Partial<Record<RecordKind, McpQuery>>;
   /** Optional read-only tool used to prove access (VERIFIED capability). */
@@ -54,7 +54,7 @@ export class McpSource implements EvidenceSource {
       ? this.cfg.transportFactory()
       : t.type === "stdio"
         ? new StdioClientTransport({ command: t.command, args: t.args, env: { PATH: process.env.PATH ?? "", ...t.env }, ...(t.cwd ? { cwd: t.cwd } : {}), stderr: "ignore" })
-        : new StreamableHTTPClientTransport(new URL(t.url), { requestInit: { headers: t.headers } });
+        : new StreamableHTTPClientTransport(new URL(t.url), { requestInit: { headers: t.headers }, ...(t.fetch ? { fetch: t.fetch } : {}) });
     const client = new Client({ name: "zerobug-verifier", version: "1.0.0" });
     await client.connect(transport);
     const { tools } = await client.listTools();
